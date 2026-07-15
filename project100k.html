@@ -1,0 +1,683 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>PROJECT 100K</title>
+<style>
+:root{
+  --ink:#0d0b1e;
+  --ink-2:#161330;
+  --ink-3:#201b42;
+  --line:#2d2756;
+  --moss:#8b86b8;
+  --fog:#cfcbe8;
+  --white:#f4f2ff;
+  --amber:#fb5fa6;
+  --amber-hot:#ff8a3d;
+  --violet:#7c3aed;
+  --cyan:#38dbd0;
+  --grad:linear-gradient(135deg,#7c3aed,#fb5fa6);
+  --radius:18px;
+  font-size:16px;
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{
+  background:var(--ink);
+  color:var(--fog);
+  font-family:"Avenir Next",Avenir,"Segoe UI",system-ui,sans-serif;
+  min-height:100vh;
+  padding-bottom:40px;
+  background-image:radial-gradient(ellipse 90% 40% at 15% -5%, #7c3aed33 0%, transparent 55%),radial-gradient(ellipse 70% 35% at 95% 0%, #fb5fa622 0%, transparent 55%);
+}
+.wrap{max-width:680px;margin:0 auto;padding:20px 16px 0}
+
+header{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:18px}
+.brand{font-family:"Arial Narrow","Helvetica Neue Condensed","Segoe UI",sans-serif;font-stretch:condensed;font-weight:800;font-size:1.55rem;letter-spacing:.12em;color:var(--white);text-transform:uppercase}
+.brand span{background:linear-gradient(90deg,#a78bfa,#fb5fa6);-webkit-background-clip:text;background-clip:text;color:transparent}
+.countdown{text-align:right}
+.countdown .num{font-family:"Arial Narrow",sans-serif;font-stretch:condensed;font-weight:800;font-size:2rem;color:var(--amber);line-height:1;letter-spacing:.02em}
+.countdown .lbl{font-size:.62rem;text-transform:uppercase;letter-spacing:.2em;color:var(--moss)}
+
+.theline{background:linear-gradient(160deg,#1b1640,#161330 60%);border:1px solid var(--line);box-shadow:0 8px 24px #05041077;border-radius:var(--radius);padding:18px 18px 14px;margin-bottom:14px;position:relative;overflow:hidden}
+.theline::after{content:"";position:absolute;inset:0;background:radial-gradient(ellipse 60% 100% at var(--beam,10%) 0%, #7c3aed22 0%, transparent 55%);pointer-events:none}
+.tl-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:14px}
+.tl-title{font-size:.62rem;text-transform:uppercase;letter-spacing:.22em;color:var(--moss)}
+.tl-val{font-family:"Arial Narrow",sans-serif;font-stretch:condensed;font-weight:800;font-size:1.15rem;color:var(--white)}
+.tl-val em{font-style:normal;color:var(--amber)}
+.track{position:relative;height:46px}
+.track .rail{position:absolute;top:22px;left:0;right:0;height:3px;background:var(--line);border-radius:2px}
+.track .fill{position:absolute;top:22px;left:0;height:3px;background:linear-gradient(90deg,var(--violet),var(--amber));border-radius:2px;transition:width .8s cubic-bezier(.2,.8,.2,1)}
+.cp{position:absolute;top:17px;width:13px;height:13px;border-radius:50%;background:var(--ink-2);border:2px solid var(--line);transform:translateX(-50%)}
+.cp.hit{border-color:var(--amber);background:var(--amber);box-shadow:0 0 10px #fb5fa688}
+.cp-lbl{position:absolute;top:38px;transform:translateX(-50%);font-size:.6rem;color:var(--moss);letter-spacing:.05em}
+.runner{position:absolute;bottom:16px;transform:translateX(-50%);transition:left .8s cubic-bezier(.2,.8,.2,1);filter:drop-shadow(0 0 6px #fb5fa6aa);line-height:0}
+.runner svg{display:block}
+.tl-foot{font-size:.7rem;color:var(--moss);margin-top:10px}
+
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:14px}
+.stat{background:var(--ink-2);border:1px solid var(--line);border-radius:var(--radius);padding:14px 12px;box-shadow:0 8px 24px #05041077}
+.stat .v{font-family:"Arial Narrow",sans-serif;font-stretch:condensed;font-weight:800;font-size:1.6rem;color:var(--white);line-height:1.1}
+.stat .v small{font-size:.85rem;color:var(--moss);font-weight:600}
+.stat .k{font-size:.6rem;text-transform:uppercase;letter-spacing:.18em;color:var(--moss);margin-top:4px}
+.stat{position:relative;overflow:hidden}
+.stat::before{content:"";position:absolute;top:0;left:0;right:0;height:3px;border-radius:3px}
+.stat:nth-child(1)::before{background:linear-gradient(90deg,#7c3aed,#fb5fa6)}
+.stat:nth-child(2)::before{background:linear-gradient(90deg,#38dbd0,#4f9cf9)}
+.stat:nth-child(3)::before{background:linear-gradient(90deg,#ff8a3d,#ffd166)}
+.stat:nth-child(1) .v{color:#fb5fa6}
+.stat:nth-child(2) .v{color:#38dbd0}
+.stat:nth-child(3) .v{color:#ffb066}
+
+.card{background:var(--ink-2);border:1px solid var(--line);border-radius:var(--radius);padding:16px;margin-bottom:14px;box-shadow:0 8px 24px #05041077}
+.card h2{font-size:.62rem;text-transform:uppercase;letter-spacing:.22em;color:var(--moss);font-weight:700;margin-bottom:12px}
+
+/* week focus */
+.wf-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px;gap:10px}
+.wf-head h2{margin:0;flex:1}
+.wknav{background:var(--ink-3);border:1px solid var(--line);color:var(--fog);border-radius:9px;width:36px;height:32px;font-size:1rem;cursor:pointer;flex-shrink:0}
+.wknav:disabled{opacity:.3;cursor:default}
+.wknav:not(:disabled):active{border-color:var(--amber);color:var(--amber)}
+.day-row{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px dashed var(--line)}
+.day-row:last-child{border:none}
+.day-row.today-row{background:linear-gradient(90deg,#fb5fa614,transparent);margin:0 -8px;padding-left:8px;padding-right:8px;border-radius:8px}
+.d-day{color:var(--moss);font-weight:600;width:36px;text-transform:uppercase;font-size:.68rem;letter-spacing:.08em;flex-shrink:0}
+.d-date{color:#6b65a0;width:58px;font-size:.7rem;flex-shrink:0}
+.d-what{flex:1;font-size:.82rem;color:var(--fog);min-width:0}
+.d-what.rest{color:#6b65a0;font-style:italic}
+.d-plan{font-family:"Arial Narrow",sans-serif;font-stretch:condensed;font-weight:800;font-size:.92rem;color:var(--white);width:52px;text-align:right;flex-shrink:0}
+.d-plan.key{color:var(--amber)}
+.d-plan.rest{color:#4a4380}
+.d-act{width:72px;flex-shrink:0}
+.d-act input{width:100%;background:var(--ink-3);border:1px solid var(--line);border-radius:8px;color:var(--white);padding:7px 8px;font-size:.85rem;text-align:right;outline:none;font-family:inherit}
+.d-act input:focus{border-color:var(--amber)}
+.d-act input.filled{border-color:#584a9e;color:var(--amber);font-weight:700}
+.d-act input::placeholder{color:#4a4380}
+.col-hdr{display:flex;gap:10px;font-size:.56rem;text-transform:uppercase;letter-spacing:.15em;color:#6b65a0;padding-bottom:6px;border-bottom:1px solid var(--line);margin-bottom:2px}
+.col-hdr .a{width:36px;flex-shrink:0}
+.col-hdr .a2{width:58px;flex-shrink:0}
+.col-hdr .b{flex:1}
+.col-hdr .c{width:52px;text-align:right;flex-shrink:0}
+.col-hdr .d{width:72px;text-align:right;flex-shrink:0}
+.progressbar{height:6px;background:var(--line);border-radius:3px;overflow:hidden;margin-top:12px}
+.progressbar>div{height:100%;background:linear-gradient(90deg,var(--violet),var(--amber));border-radius:3px;transition:width .5s}
+.pb-lbl{display:flex;justify-content:space-between;font-size:.68rem;color:var(--moss);margin-top:6px}
+
+/* plan vs actual chart */
+.pv-chart{display:flex;gap:5px;align-items:flex-end;height:130px;margin-top:4px}
+.pv-col{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:center;height:100%;gap:4px;cursor:pointer}
+.pv-bars{position:relative;width:100%;max-width:26px;height:100%;display:flex;align-items:flex-end;justify-content:center}
+.pv-plan{position:absolute;bottom:0;width:100%;background:var(--ink-3);border:1px solid var(--line);border-bottom:none;border-radius:4px 4px 0 0}
+.pv-act{position:relative;width:60%;background:linear-gradient(180deg,#fb5fa6,#7c3aed);border-radius:3px 3px 0 0;min-height:0;z-index:1}
+.pv-col.cur .pv-plan{border-color:var(--amber)}
+.pv-lbl{font-size:.55rem;color:var(--moss)}
+.pv-col.cur .pv-lbl{color:var(--amber);font-weight:700}
+.legend{display:flex;gap:16px;font-size:.65rem;color:var(--moss);margin-top:10px}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:5px;vertical-align:-1px}
+.legend .li-p{background:var(--ink-3);border:1px solid var(--line)}
+.legend .li-a{background:var(--amber)}
+
+/* plan list */
+.wkcard{background:var(--ink-2);border:1px solid var(--line);border-radius:var(--radius);padding:13px 15px;margin-bottom:9px;display:flex;align-items:center;gap:14px}
+.wkcard.now{border-color:var(--amber);background:linear-gradient(180deg,#2b1f4d55,transparent),var(--ink-2)}
+.wkcard.done{opacity:.45}
+.wkcard.race{border-color:var(--amber-hot);background:linear-gradient(135deg,#3a1035,var(--ink-2))}
+.wknum{font-family:"Arial Narrow",sans-serif;font-stretch:condensed;font-weight:800;font-size:1.25rem;color:var(--moss);width:38px;flex-shrink:0}
+.wkcard.now .wknum,.wkcard.race .wknum{color:var(--amber)}
+.wkbody{flex:1;min-width:0}
+.wkphase{font-size:.58rem;text-transform:uppercase;letter-spacing:.18em;color:var(--moss)}
+.wkmain{font-size:.86rem;color:var(--white);font-weight:600;margin:2px 0}
+.wknote{font-size:.72rem;color:var(--moss)}
+.wkvol{text-align:right;flex-shrink:0}
+.wkvol .t{font-family:"Arial Narrow",sans-serif;font-stretch:condensed;font-weight:800;font-size:1.15rem;color:var(--white)}
+.wkvol .lr{font-size:.65rem;color:var(--amber)}
+.nowtag{font-size:.55rem;background:var(--grad);color:#fff;font-weight:800;letter-spacing:.12em;padding:2px 7px;border-radius:20px;text-transform:uppercase}
+.sec-hdr{font-size:.62rem;text-transform:uppercase;letter-spacing:.22em;color:var(--moss);font-weight:700;margin:20px 0 12px}
+
+/* expandable week details */
+.wkcard{flex-wrap:wrap}
+.wk-toggle{background:none;border:none;color:var(--moss);font-size:.85rem;cursor:pointer;padding:4px 6px;flex-shrink:0;transition:transform .25s}
+.wkcard.open .wk-toggle{transform:rotate(90deg);color:var(--amber)}
+.wk-detail{display:none;width:100%;margin-top:10px;padding-top:8px;border-top:1px dashed var(--line)}
+.wkcard.open .wk-detail{display:block}
+.wd-row{display:flex;gap:10px;padding:5px 0;font-size:.78rem;border-bottom:1px dashed #262148}
+.wd-row:last-child{border:none}
+.wd-day{color:var(--moss);width:36px;font-weight:600;text-transform:uppercase;font-size:.65rem;letter-spacing:.08em;flex-shrink:0}
+.wd-date{color:#6b65a0;width:58px;font-size:.7rem;flex-shrink:0}
+.wd-what{flex:1;color:var(--fog)}
+.wd-what.rest{color:#6b65a0;font-style:italic}
+.wd-km{font-family:"Arial Narrow",sans-serif;font-stretch:condensed;font-weight:800;color:var(--white);flex-shrink:0}
+.wd-km.key{color:var(--amber)}
+.wd-km.rest{color:#4a4380}
+.sec-row{display:flex;justify-content:space-between;align-items:center;margin:20px 0 12px}
+.sec-row .sec-hdr{margin:0}
+.btn-all{background:var(--ink-3);border:1px solid var(--line);color:var(--fog);border-radius:9px;padding:7px 14px;font-size:.68rem;text-transform:uppercase;letter-spacing:.12em;font-weight:700;cursor:pointer;font-family:inherit}
+.btn-all:active{border-color:var(--amber);color:var(--amber)}
+
+/* settings */
+.gear{background:var(--ink-3);border:1px solid var(--line);color:var(--fog);border-radius:9px;width:34px;height:34px;font-size:1rem;cursor:pointer;margin-left:12px;flex-shrink:0}
+.gear:active{border-color:var(--amber);color:var(--amber)}
+.modal-bg{display:none;position:fixed;inset:0;background:#000a;backdrop-filter:blur(3px);z-index:50;align-items:center;justify-content:center;padding:20px}
+.modal-bg.open{display:flex}
+.modal{background:var(--ink-2);border:1px solid var(--line);border-radius:18px;padding:22px 18px;width:100%;max-width:420px}
+.modal h3{font-family:"Arial Narrow",sans-serif;font-stretch:condensed;font-weight:800;font-size:1.05rem;letter-spacing:.12em;text-transform:uppercase;color:var(--white);margin-bottom:16px}
+.set-row{margin-bottom:14px}
+.set-row label{display:block;font-size:.62rem;text-transform:uppercase;letter-spacing:.18em;color:var(--moss);margin-bottom:6px}
+.set-row input[type=date]{width:100%;background:var(--ink-3);border:1px solid var(--line);border-radius:10px;color:var(--white);padding:11px 12px;font-size:.95rem;font-family:inherit;outline:none;color-scheme:dark}
+.set-row input[type=date]:focus{border-color:var(--amber)}
+.set-hint{font-size:.68rem;color:#6b65a0;margin-top:5px}
+.set-btns{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:6px}
+.sbtn{border-radius:10px;padding:12px;font-size:.72rem;text-transform:uppercase;letter-spacing:.1em;font-weight:700;cursor:pointer;font-family:inherit;border:1px solid var(--line);background:var(--ink-3);color:var(--fog)}
+.sbtn:active{border-color:var(--amber);color:var(--amber)}
+.sbtn.primary{background:var(--grad);color:#fff;border:none;box-shadow:0 4px 18px #7c3aed55}
+.sbtn.danger{border-color:#5a2a26;color:#ff6b5e}
+.sbtn.wide{grid-column:1/-1}
+
+/* toast */
+.toast{position:fixed;left:50%;bottom:28px;transform:translateX(-50%) translateY(20px);background:var(--ink-3);border:1px solid var(--line);color:var(--fog);padding:12px 18px;border-radius:12px;font-size:.82rem;z-index:100;opacity:0;pointer-events:none;transition:opacity .25s, transform .25s;max-width:90vw;text-align:center}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast.ok{border-color:#584a9e;color:var(--amber)}
+.toast.err{border-color:#5a2a26;color:#ff6b5e}
+@media(prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="brand">PROJECT <span>100K</span></div>
+    <div style="display:flex;align-items:flex-end">
+      <div class="countdown">
+        <div class="num" id="cd-days">—</div>
+        <div class="lbl" id="cd-lbl">days to race</div>
+      </div>
+      <button class="gear" onclick="openSettings()" aria-label="Settings">⚙</button>
+    </div>
+  </header>
+
+  <div class="theline" id="theline">
+    <div class="tl-head">
+      <div class="tl-title">The Line — total km banked</div>
+      <div class="tl-val"><em id="tl-long">0</em> / <span id="tl-total">—</span> km</div>
+    </div>
+    <div class="track">
+      <div class="rail"></div>
+      <div class="fill" id="tl-fill" style="width:0%"></div>
+      <div class="cp" style="left:25%" data-cp="25"></div>
+      <div class="cp" style="left:50%" data-cp="50"></div>
+      <div class="cp" style="left:75%" data-cp="75"></div>
+      <div class="cp" style="left:100%" data-cp="100"></div>
+      <div class="cp-lbl" style="left:0%">0</div>
+      <div class="cp-lbl" style="left:25%" data-q="25"></div>
+      <div class="cp-lbl" style="left:50%" data-q="50"></div>
+      <div class="cp-lbl" style="left:75%" data-q="75"></div>
+      <div class="cp-lbl" style="left:100%" data-q="100"></div>
+      <div class="runner" id="tl-runner" style="left:0%"></div>
+    </div>
+    <div class="tl-foot" id="tl-foot"></div>
+  </div>
+
+  <div class="stats">
+    <div class="stat hot"><div class="v" id="st-week">0<small> km</small></div><div class="k">this week</div></div>
+    <div class="stat"><div class="v" id="st-runs">0</div><div class="k">runs this week</div></div>
+    <div class="stat"><div class="v" id="st-total">0<small> km</small></div><div class="k">total banked</div></div>
+  </div>
+
+  <!-- plan vs actual -->
+  <div class="card">
+    <h2>Planned vs actual — weekly km</h2>
+    <div class="pv-chart" id="pv-chart"></div>
+    <div class="legend">
+      <span><i class="li-p"></i>Planned</span>
+      <span><i class="li-a"></i>Actual</span>
+    </div>
+  </div>
+
+  <!-- week focus with nav + per-day actual input -->
+  <div class="card week-focus">
+    <div class="wf-head">
+      <button class="wknav" id="wk-prev" onclick="navWeek(-1)" aria-label="Previous week">‹</button>
+      <h2 id="wf-title" style="text-align:center">Week</h2>
+      <button class="wknav" id="wk-next" onclick="navWeek(1)" aria-label="Next week">›</button>
+    </div>
+    <div class="col-hdr"><span class="a">Day</span><span class="a2">Date</span><span class="b">Session</span><span class="c">Plan</span><span class="d">Actual</span></div>
+    <div id="wf-rows"></div>
+    <div class="progressbar"><div id="wf-bar" style="width:0%"></div></div>
+    <div class="pb-lbl"><span id="wf-done">0 km done</span><span id="wf-target">target — km</span></div>
+  </div>
+
+  <div class="sec-row">
+    <div class="sec-hdr">The 14 weeks</div>
+    <button class="btn-all" id="btn-all" onclick="toggleAll()">Expand all</button>
+  </div>
+  <div id="plan-list"></div>
+</div>
+
+
+<div class="toast" id="toast"></div>
+<div class="modal-bg" id="modal" onclick="if(event.target===this)closeSettings()">
+  <div class="modal">
+    <h3>Settings</h3>
+    <div class="set-row">
+      <label for="s-race">Race date</label>
+      <input type="date" id="s-race">
+      <div class="set-hint">The 14-week plan re-anchors so race day lands in week 14. Logged runs stay on their calendar dates.</div>
+    </div>
+    <div class="set-btns">
+      <button class="sbtn primary wide" onclick="saveSettings()">Save</button>
+      <button class="sbtn" onclick="exportData()">Export data</button>
+      <button class="sbtn" onclick="document.getElementById('s-import').click()">Import data</button>
+      <input type="file" id="s-import" accept=".json" style="display:none" onchange="importData(this)">
+      <div id="imp-confirm" class="wide" style="display:none;grid-column:1/-1;border:1px solid #5a2a26;border-radius:10px;padding:12px">
+        <div id="imp-msg" style="font-size:.75rem;color:var(--fog);margin-bottom:10px"></div>
+        <div style="display:flex;gap:8px">
+          <button class="sbtn primary" style="flex:1" onclick="applyImport()">Replace</button>
+          <button class="sbtn" style="flex:1" onclick="cancelImport()">Cancel</button>
+        </div>
+      </div>
+      <button class="sbtn danger wide" id="btn-reset" onclick="resetAll()">Reset all data</button>
+    </div>
+  </div>
+</div>
+<script>
+/* ================= data ================= */
+const SETKEY = 'p100k_settings_v1';
+let settings = { raceDate: '2026-10-17' };
+try{ settings = Object.assign(settings, JSON.parse(localStorage.getItem(SETKEY))||{}); }catch(e){}
+let RACE, PLAN_START;
+function applySettings(){
+  RACE = new Date(settings.raceDate + 'T07:00:00');
+  // Monday of race week, then back 13 weeks = plan start
+  const rw = new Date(settings.raceDate + 'T12:00');
+  rw.setDate(rw.getDate() - ((rw.getDay()+6)%7));
+  PLAN_START = new Date(rw);
+  PLAN_START.setDate(PLAN_START.getDate() - 13*7);
+  PLAN_START.setHours(0,0,0,0);
+}
+applySettings();
+const KEY = 'p100k_days_v2';
+const TOTAL_PLAN = () => PLAN.reduce((s,p)=>s+p.vol,0);
+const OLDKEY = 'p100k_runs_v1';
+
+const PLAN = [
+ {w:1, phase:'Rebuild', vol:30, lr:15, main:'Wake the legs up', note:'All conversational pace'},
+ {w:2, phase:'Rebuild', vol:36, lr:18, main:'Volume climbs', note:'Eat on the long run'},
+ {w:3, phase:'Rebuild', vol:42, lr:24, main:'First real long run', note:'LR run/walk 25:5'},
+ {w:4, phase:'Cutback', vol:30, lr:16, main:'Absorb the work', note:'Drop everything ~30%. Sleep is training.'},
+ {w:5, phase:'Ultra block', vol:48, lr:28, main:'Back-to-backs begin', note:'Sun on tired legs — the 100K secret'},
+ {w:6, phase:'Ultra block', vol:54, lr:32, main:'Longest since last year', note:'Test full race kit + vest'},
+ {w:7, phase:'Cutback', vol:38, lr:20, main:'Recover hard', note:'Halve the weekend. Strength 2×20 min stays.'},
+ {w:8, phase:'Ultra block', vol:58, lr:36, main:'Big weekend', note:'Fuel 200–300 kcal/h on a timer'},
+ {w:9, phase:'Ultra block', vol:62, lr:40, main:'40K on your route', note:'Run part of the actual 100K path'},
+ {w:10,phase:'Cutback', vol:44, lr:24, main:'Recharge before peak', note:'Arrange support for W11 rehearsal'},
+ {w:11,phase:'Peak', vol:68, lr:58, main:'DRESS REHEARSAL 55–60K', note:'Full simulation: pacing, food, kit, night section'},
+ {w:12,phase:'Recover', vol:46, lr:26, main:'Absorb the rehearsal', note:'All easy. Fix whatever broke in W11.'},
+ {w:13,phase:'Taper', vol:32, lr:18, main:'Taper — trust it', note:'Feeling flat is normal. Fitness is banked.'},
+ {w:14,phase:'RACE', vol:111, lr:100, main:'RACE DAY', note:'Slow start, hike hills, eat every 30 min'}
+];
+
+/* per-week day sessions: [Mon..Sun] {what, km, key?} — null km = rest */
+function weekDays(p){
+  if(p.w===14){
+    return [
+      {what:'Shakeout easy', km:6},
+      null,
+      {what:'Shakeout easy', km:5},
+      null, null,
+      {what:'RACE — 100 km', km:100, key:true},
+      null
+    ];
+  }
+  const tue = Math.round((p.vol-p.lr)*0.35);
+  const thu = Math.round((p.vol-p.lr)*0.4);
+  const sun = Math.max(p.vol-p.lr-tue-thu,0);
+  return [
+    null,
+    {what:'Easy', km:tue},
+    null,
+    {what:'Easy + hills', km:thu},
+    null,
+    {what:p.w===11?'Long run — dress rehearsal':'Long run', km:p.lr, key:true},
+    sun>0 ? {what:'Easy, tired legs', km:sun} : null
+  ];
+}
+
+/* ================= storage: { 'YYYY-MM-DD': km } ================= */
+let days = {};
+try{ days = JSON.parse(localStorage.getItem(KEY)) || {}; }catch(e){ days = {}; }
+/* migrate old run-list data if present */
+try{
+  const old = JSON.parse(localStorage.getItem(OLDKEY));
+  if(old && old.length && !Object.keys(days).length){
+    old.forEach(r=>{ days[r.date] = (days[r.date]||0) + r.km; });
+    localStorage.setItem(KEY, JSON.stringify(days));
+  }
+}catch(e){}
+function save(){ try{ localStorage.setItem(KEY, JSON.stringify(days)); }catch(e){} }
+
+/* ================= helpers ================= */
+const DAYNAMES = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+function todayStr(){ const d=new Date(); return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function currentWeek(){
+  const idx = Math.floor((new Date(todayStr()+'T12:00') - PLAN_START) / (7*864e5));
+  return Math.min(Math.max(idx,0),13);
+}
+function mondayOf(w){ const d=new Date(PLAN_START); d.setDate(d.getDate()+w*7); return d; }
+function dateStr(w,dayIdx){
+  const d=mondayOf(w); d.setDate(d.getDate()+dayIdx);
+  return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+}
+function fmt(d){ return d.toLocaleDateString('en-GB',{day:'numeric',month:'short'}); }
+function fmtOrd(w, dayIdx){
+  const d = new Date(dateStr(w,dayIdx)+'T12:00');
+  const n = d.getDate();
+  const suf = (n%10==1&&n!=11)?'st':(n%10==2&&n!=12)?'nd':(n%10==3&&n!=13)?'rd':'th';
+  return d.toLocaleDateString('en-GB',{month:'short'})+' '+n+suf;
+}
+function weekActual(w){
+  let s=0;
+  for(let i=0;i<7;i++) s += days[dateStr(w,i)]||0;
+  return s;
+}
+
+
+/* ===== power-up runner: 5 original forms, grows with longest run ===== */
+function runnerSvg(pct){
+  // stage: 0 base, 1 steam, 2 titan, 3 crimson, 4 radiant
+  const stage = pct>=100?4: pct>=75?3: pct>=50?2: pct>=25?1: 0;
+  const S = [18,21,25,28,32][stage]; // height px
+  // shared running pose (side view, stylized)
+  const body = (skin,shirt,extra,aura) => `
+  <svg width="${S}" height="${S}" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-label="runner stage ${stage+1}">
+    ${aura||''}
+    <!-- rear leg -->
+    <path d="M15 20 L10 25 L7 24" stroke="${skin}" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    <!-- front leg -->
+    <path d="M16 20 L21 23 L23 28" stroke="${skin}" stroke-width="2.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    <!-- torso -->
+    <path d="M15 20 L17 12" stroke="${shirt}" stroke-width="4" stroke-linecap="round"/>
+    <!-- rear arm -->
+    <path d="M16 13 L11 15" stroke="${skin}" stroke-width="2.4" stroke-linecap="round"/>
+    <!-- front arm -->
+    <path d="M17 13 L22 10" stroke="${skin}" stroke-width="2.4" stroke-linecap="round"/>
+    <!-- head -->
+    <circle cx="18.5" cy="8.5" r="3.2" fill="${skin}"/>
+    ${extra||''}
+  </svg>`;
+
+  if(stage===0) // base: rookie in a cap
+    return body('#e8b98a','#8b5cf6',
+      '<path d="M15.6 7.6 Q18.5 4.6 21.4 7.2 L21 8.6 Q18.5 6.6 16 8.8 Z" fill="#e6e1ff"/>');
+  if(stage===1) // steam: pink flush + steam wisps
+    return body('#f0a58a','#8b5cf6',
+      '<path d="M15.6 7.6 Q18.5 4.6 21.4 7.2 L21 8.6 Q18.5 6.6 16 8.8 Z" fill="#e6e1ff"/>'+
+      '<path d="M12 5 q1 -2 0 -3.5 M15 4 q1 -1.6 .2 -3 M22 4.4 q1.2 -1.8 .4 -3.2" stroke="#ffffffaa" stroke-width="1" fill="none" stroke-linecap="round"/>');
+  if(stage===2) // titan: bulked silhouette
+    return `
+  <svg width="${S}" height="${S}" viewBox="0 0 32 32" xmlns="http://www.w3.org/2000/svg" aria-label="runner stage 3">
+    <path d="M14 20 L9 26 L6 25" stroke="#e8b98a" stroke-width="3.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M17 20 L22 23 L24 29" stroke="#e8b98a" stroke-width="3.4" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M15 21 L17.5 11" stroke="#8b5cf6" stroke-width="6.2" stroke-linecap="round"/>
+    <path d="M16 12 L9.5 14.5" stroke="#e8b98a" stroke-width="3.4" stroke-linecap="round"/>
+    <path d="M18 12 L24.5 8.5" stroke="#e8b98a" stroke-width="3.4" stroke-linecap="round"/>
+    <circle cx="19.5" cy="7.5" r="3.4" fill="#e8b98a"/>
+    <path d="M16.4 6.6 Q19.5 3.4 22.8 6.2 L22.3 7.8 Q19.5 5.5 16.9 7.9 Z" fill="#e6e1ff"/>
+  </svg>`;
+  if(stage===3) // crimson: dark form, red-hot glow
+    return body('#8a2f2f','#2a1416',
+      '<path d="M15.6 7.6 Q18.5 4.6 21.4 7.2 L21 8.6 Q18.5 6.6 16 8.8 Z" fill="#ff6b5e"/>'+
+      '<path d="M11 16 q-2 .5 -3.4 0 M12 19 q-2.2 .8 -3.8 .3" stroke="#ff8a3d88" stroke-width="1" fill="none" stroke-linecap="round"/>',
+      '<circle cx="17" cy="15" r="13" fill="none" stroke="#ff6b5e44" stroke-width="1.5"/>');
+  // radiant: white ascended form, flowing hair, sun rays
+  return body('#f5f0e6','#ffffff',
+    '<path d="M16 6.5 Q13 4 11 5.5 M17 5.6 Q15 2.6 12.6 3.2 M20 5.4 Q20.6 2.4 23 2.6" stroke="#ffffff" stroke-width="1.4" fill="none" stroke-linecap="round"/>'+
+    '<circle cx="18.5" cy="8.5" r="1" fill="#ffb547"/>',
+    '<g stroke="#ffb54766" stroke-width="1.4" stroke-linecap="round">'+
+    '<path d="M17 0 v3 M17 27 v3 M2 15 h3 M27 15 h3 M6 4.5 l2 2 M26 25.5 l2 2 M28 4.5 l-2 2 M8 25.5 l-2 2"/></g>'+
+    '<circle cx="17" cy="15" r="13.5" fill="none" stroke="#ffffff33" stroke-width="1.5"/>');
+}
+
+let viewWeek = currentWeek();
+let openWeeks = new Set();
+
+/* ================= render ================= */
+function render(){
+  const cw = currentWeek();
+  const tds = todayStr();
+
+  // countdown
+  document.getElementById('cd-days').textContent = Math.max(Math.ceil((RACE-new Date())/864e5),0);
+  document.getElementById('cd-lbl').textContent = 'days to race · ' + RACE.toLocaleDateString('en-GB',{day:'numeric',month:'short'});
+
+  // the line: cumulative km vs total plan volume
+  const vals = Object.values(days);
+  const totalPlan = TOTAL_PLAN();
+  const banked = vals.reduce((s,v)=>s+v,0);
+  const pct = Math.min(banked/totalPlan*100,100);
+  document.getElementById('tl-long').textContent = Math.round(banked);
+  document.getElementById('tl-total').textContent = totalPlan;
+  document.getElementById('tl-fill').style.width = pct+'%';
+  const runnerEl = document.getElementById('tl-runner');
+  runnerEl.style.left = pct+'%';
+  runnerEl.innerHTML = runnerSvg(pct);
+  document.getElementById('theline').style.setProperty('--beam', pct+'%');
+  document.querySelectorAll('.cp').forEach(c=>c.classList.toggle('hit', pct >= +c.dataset.cp));
+  document.querySelectorAll('.cp-lbl[data-q]').forEach(l=>{
+    l.textContent = Math.round(totalPlan * (+l.dataset.q)/100);
+  });
+  document.getElementById('tl-foot').textContent = banked===0
+    ? 'Enter a run in the week below to start moving down The Line.'
+    : pct>=100 ? 'The Line is complete. Every planned kilometre banked.'
+    : Math.round(banked)+' of '+totalPlan+' km banked ('+Math.round(pct)+'%)';
+
+  // stats (always current week)
+  const wkKm = weekActual(cw);
+  let wkRuns = 0;
+  for(let i=0;i<7;i++) if((days[dateStr(cw,i)]||0)>0) wkRuns++;
+  document.getElementById('st-week').innerHTML = Math.round(wkKm)+'<small> km</small>';
+  document.getElementById('st-runs').textContent = wkRuns;
+  const total = vals.reduce((s,v)=>s+v,0);
+  document.getElementById('st-total').innerHTML = Math.round(total)+'<small> km</small>';
+
+  // ===== week focus (viewWeek) =====
+  const p = PLAN[viewWeek];
+  const mon = mondayOf(viewWeek), sun = new Date(mon); sun.setDate(sun.getDate()+6);
+  document.getElementById('wf-title').textContent =
+    'Week '+p.w+' · '+p.phase+' · '+fmt(mon)+'–'+fmt(sun)+(viewWeek===cw?' (now)':'');
+  document.getElementById('wk-prev').disabled = viewWeek===0;
+  document.getElementById('wk-next').disabled = viewWeek===13;
+
+  const sessions = weekDays(p);
+  let html='';
+  for(let i=0;i<7;i++){
+    const ds = dateStr(viewWeek,i);
+    const s = sessions[i];
+    const act = days[ds];
+    const isToday = ds===tds;
+    const d = new Date(ds+'T12:00');
+    html += '<div class="day-row'+(isToday?' today-row':'')+'">'
+      + '<span class="d-day">'+DAYNAMES[i]+'</span><span class="d-date">'+fmtOrd(viewWeek,i)+'</span>'
+      + (s
+        ? '<span class="d-what">'+s.what+'</span><span class="d-plan'+(s.key?' key':'')+'">'+s.km+' km</span>'
+        : '<span class="d-what rest">Rest</span><span class="d-plan rest">—</span>')
+      + '<span class="d-act"><input type="number" step="1" min="0" inputmode="numeric" placeholder="— km"'
+      + ' value="'+(act!=null?act:'')+'"'
+      + (act!=null?' class="filled"':'')
+      + ' onchange="setDay(\''+ds+'\',this.value)"></span>'
+      + '</div>';
+  }
+  document.getElementById('wf-rows').innerHTML = html;
+
+  const vwKm = weekActual(viewWeek);
+  const wpct = p.vol ? Math.min(vwKm/p.vol*100,100) : 0;
+  document.getElementById('wf-bar').style.width = wpct+'%';
+  document.getElementById('wf-done').textContent = Math.round(vwKm)+' km done';
+  document.getElementById('wf-target').textContent = 'target '+p.vol+' km';
+
+  // ===== plan vs actual chart =====
+  const maxV = Math.max(...PLAN.map(x=>x.vol), ...PLAN.map((x,i)=>weekActual(i)), 1);
+  const chart = document.getElementById('pv-chart');
+  chart.innerHTML = PLAN.map((x,i)=>{
+    const a = weekActual(i);
+    const ph = Math.round(x.vol/maxV*110);
+    const ah = Math.round(a/maxV*110);
+    return '<div class="pv-col'+(i===cw?' cur':'')+'" onclick="goWeek('+i+')" title="W'+x.w+': plan '+x.vol+' / actual '+a.toFixed(1)+' km">'
+      + '<div class="pv-bars">'
+      + '<div class="pv-plan" style="height:'+ph+'px"></div>'
+      + '<div class="pv-act" style="height:'+ah+'px"></div>'
+      + '</div><div class="pv-lbl">'+x.w+'</div></div>';
+  }).join('');
+
+  // ===== 14 week list =====
+  document.getElementById('plan-list').innerHTML = PLAN.map((x,i)=>{
+    const cls = x.w===14?'race': i<cw?'done': i===cw?'now':'';
+    const open = openWeeks.has(i);
+    const sess = weekDays(x);
+    let det = '';
+    for(let d=0; d<7; d++){
+      const s = sess[d];
+      det += '<div class="wd-row"><span class="wd-day">'+DAYNAMES[d]+'</span><span class="wd-date">'+fmtOrd(i,d)+'</span>'
+        + (s
+          ? '<span class="wd-what">'+s.what+'</span><span class="wd-km'+(s.key?' key':'')+'">'+s.km+' km</span>'
+          : '<span class="wd-what rest">Rest</span><span class="wd-km rest">—</span>');
+      det += '</div>';
+    }
+    return '<div class="wkcard '+cls+(open?' open':'')+'" id="wk-'+i+'">'
+      + '<div class="wknum">'+String(x.w).padStart(2,'0')+'</div>'
+      + '<div class="wkbody" onclick="goWeek('+i+')" style="cursor:pointer">'
+      + '<div class="wkphase">'+x.phase+' · wk of '+fmt(mondayOf(i))+(i===cw?' <span class="nowtag">now</span>':'')+'</div>'
+      + '<div class="wkmain">'+x.main+'</div>'
+      + '<div class="wknote">'+x.note+'</div>'
+      + '</div><div class="wkvol"><div class="t">'+x.vol+'<span style="font-size:.7rem;color:var(--moss)"> km</span></div>'
+      + '<div class="lr">LR '+x.lr+'</div></div>'
+      + '<button class="wk-toggle" onclick="toggleWeek('+i+',event)" aria-label="Toggle week details">▶</button>'
+      + '<div class="wk-detail">'+det+'</div>'
+      + '</div>';
+  }).join('');
+}
+
+function syncAllBtn(){
+  const b = document.getElementById('btn-all');
+  if(b) b.textContent = openWeeks.size === PLAN.length ? 'Collapse all' : 'Expand all';
+}
+function toggleWeek(i, ev){
+  if(ev) ev.stopPropagation();
+  if(openWeeks.has(i)) openWeeks.delete(i); else openWeeks.add(i);
+  render();
+  syncAllBtn();
+}
+function toggleAll(){
+  if(openWeeks.size === PLAN.length) openWeeks.clear();
+  else openWeeks = new Set(PLAN.map((_,i)=>i));
+  render();
+  syncAllBtn();
+}
+
+/* ================= actions ================= */
+function setDay(ds, val){
+  const km = Math.round(parseFloat(val));
+  if(!val || isNaN(km) || km<=0) delete days[ds];
+  else days[ds] = km;
+  save(); render();
+}
+function navWeek(dir){
+  viewWeek = Math.min(Math.max(viewWeek+dir,0),13);
+  render();
+}
+function goWeek(i){
+  viewWeek = i;
+  render();
+  document.querySelector('.week-focus').scrollIntoView({behavior:'smooth',block:'start'});
+}
+
+
+function showToast(msg, type){
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show ' + (type||'');
+  clearTimeout(t._h);
+  t._h = setTimeout(()=>{ t.className = 'toast'; }, 2600);
+}
+/* ===== settings ===== */
+function openSettings(){
+  document.getElementById('s-race').value = settings.raceDate;
+  document.getElementById('modal').classList.add('open');
+}
+function closeSettings(){ document.getElementById('modal').classList.remove('open'); cancelImport(); if(resetArmed){clearTimeout(resetArmed);resetArmed=null;document.getElementById('btn-reset').textContent='Reset all data';} }
+function saveSettings(){
+  const v = document.getElementById('s-race').value;
+  if(v){ settings.raceDate = v; try{ localStorage.setItem(SETKEY, JSON.stringify(settings)); }catch(e){} }
+  applySettings();
+  viewWeek = currentWeek();
+  closeSettings();
+  render(); syncAllBtn();
+  showToast('Settings saved — race day ' + RACE.toLocaleDateString('en-GB',{day:'numeric',month:'short'}), 'ok');
+}
+function exportData(){
+  try{
+    const blob = new Blob([JSON.stringify({settings, days}, null, 2)], {type:'application/json'});
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    a.download = 'project100k-backup.json';
+    a.click();
+    URL.revokeObjectURL(a.href);
+    showToast('Backup exported — ' + Object.keys(days).length + ' runs', 'ok');
+  }catch(e){
+    showToast('Export failed', 'err');
+  }
+}
+function importData(inp){
+  const f = inp.files[0]; if(!f) return;
+  const r = new FileReader();
+  r.onload = () => {
+    try{
+      const d = JSON.parse(r.result);
+      if(!d.days && !(d.settings&&d.settings.raceDate)) throw new Error('bad format');
+      pendingImport = d;
+      const n = d.days ? Object.keys(d.days).length : 0;
+      document.getElementById('imp-msg').textContent =
+        'Backup contains ' + n + ' runs. This replaces your current data.';
+      document.getElementById('imp-confirm').style.display = 'block';
+    }catch(e){ showToast('Import failed — not a valid backup file', 'err'); }
+  };
+  r.onerror = () => showToast('Import failed — could not read file', 'err');
+  r.readAsText(f);
+  inp.value = '';
+}
+let pendingImport = null;
+function applyImport(){
+  if(!pendingImport) return;
+  const d = pendingImport; pendingImport = null;
+  document.getElementById('imp-confirm').style.display = 'none';
+  if(d.days) days = d.days;
+  if(d.settings && d.settings.raceDate) settings.raceDate = d.settings.raceDate;
+  save();
+  try{ localStorage.setItem(SETKEY, JSON.stringify(settings)); }catch(e){}
+  applySettings(); viewWeek = currentWeek();
+  closeSettings(); render(); syncAllBtn();
+  showToast('Import complete — ' + Object.keys(days).length + ' runs restored', 'ok');
+}
+function cancelImport(){
+  pendingImport = null;
+  document.getElementById('imp-confirm').style.display = 'none';
+}
+let resetArmed = null;
+function resetAll(){
+  const b = document.getElementById('btn-reset');
+  if(!resetArmed){
+    resetArmed = setTimeout(()=>{ resetArmed=null; b.textContent='Reset all data'; }, 4000);
+    b.textContent = 'Tap again to confirm ⚠';
+    return;
+  }
+  clearTimeout(resetArmed); resetArmed = null;
+  b.textContent = 'Reset all data';
+  days = {}; settings = { raceDate: '2026-10-17' };
+  try{ localStorage.removeItem(KEY); localStorage.removeItem(SETKEY); localStorage.removeItem(OLDKEY); }catch(e){}
+  applySettings(); viewWeek = currentWeek();
+  closeSettings(); render(); syncAllBtn();
+  showToast('All data reset', 'ok');
+}
+render();
+syncAllBtn();
+</script>
+</body>
+</html>
