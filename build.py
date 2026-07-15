@@ -1,8 +1,12 @@
 #!/usr/bin/env python3
-"""Encrypt app.html into index.html behind a passphrase lock screen.
+"""Encrypt app.html into index.html, locked with your GitHub token.
 
-Usage:  python3 build.py            (prompts for passphrase)
-        python3 build.py <pass>     (passphrase as argument)
+The token is the single secret: it decrypts the page AND is used by the
+app to sync data to the private p100k-data repo. Rotating the token means
+re-running this script and pushing the new index.html.
+
+Usage:  python3 build.py            (prompts for token)
+        python3 build.py <token>    (token as argument)
 
 Deploy index.html to GitHub Pages. Keep app.html out of git (.gitignore).
 """
@@ -35,8 +39,8 @@ button:disabled{opacity:.5}
 <body>
 <form class="lock" id="f">
   <div class="brand">PROJECT <span>100K</span></div>
-  <div class="sub">Private — enter passphrase</div>
-  <input type="password" id="pw" autocomplete="current-password" autofocus>
+  <div class="sub">Private — enter your GitHub token</div>
+  <input type="password" id="pw" autocomplete="off" autofocus>
   <button id="go">Unlock</button>
   <div class="err" id="err"></div>
 </form>
@@ -55,23 +59,28 @@ async function unlock(pass){
   const key=await crypto.subtle.deriveKey({name:'PBKDF2',salt,iterations:ITER,hash:'SHA-256'},km,{name:'AES-GCM',length:256},true,['decrypt']);
   const html=await decrypt(key,iv,ct);
   const rk=await crypto.subtle.exportKey('raw',key);
-  try{sessionStorage.setItem('p100k_k',btoa(String.fromCharCode(...new Uint8Array(rk))));}catch(e){}
+  try{
+    localStorage.setItem('p100k_k',btoa(String.fromCharCode(...new Uint8Array(rk))));
+    // the token doubles as the sync credential — hand it to the app
+    let c={}; try{c=JSON.parse(localStorage.getItem('p100k_sync_v1'))||{}}catch(e){}
+    if(c.token!==pass) localStorage.setItem('p100k_sync_v1',JSON.stringify({token:pass,owner:''}));
+  }catch(e){}
   show(html);
 }
 async function tryCached(){
-  const k=sessionStorage.getItem('p100k_k'); if(!k)return;
+  const k=localStorage.getItem('p100k_k'); if(!k)return;
   try{
     const raw=b64(PAYLOAD), iv=raw.slice(16,28), ct=raw.slice(28);
     const key=await crypto.subtle.importKey('raw',b64(k),{name:'AES-GCM'},false,['decrypt']);
     show(await decrypt(key,iv,ct));
-  }catch(e){sessionStorage.removeItem('p100k_k');}
+  }catch(e){localStorage.removeItem('p100k_k');}
 }
 document.getElementById('f').addEventListener('submit',async ev=>{
   ev.preventDefault();
   const btn=document.getElementById('go'),err=document.getElementById('err');
   btn.disabled=true;btn.textContent='Unlocking…';err.textContent='';
   try{await unlock(document.getElementById('pw').value);}
-  catch(e){err.textContent='Wrong passphrase';btn.disabled=false;btn.textContent='Unlock';document.getElementById('pw').select();}
+  catch(e){err.textContent='Wrong token';btn.disabled=false;btn.textContent='Unlock';document.getElementById('pw').select();}
 });
 if(!crypto.subtle)document.getElementById('err').textContent='Needs HTTPS or localhost to unlock.';
 else if(document.readyState==='complete')tryCached();
@@ -84,9 +93,9 @@ else window.addEventListener('load',tryCached);
 def main():
     here = os.path.dirname(os.path.abspath(__file__))
     src = open(os.path.join(here, 'app.html'), 'rb').read()
-    pw = sys.argv[1] if len(sys.argv) > 1 else getpass.getpass('Passphrase: ')
+    pw = sys.argv[1] if len(sys.argv) > 1 else getpass.getpass('GitHub token: ')
     if not pw:
-        sys.exit('Empty passphrase, aborting.')
+        sys.exit('Empty token, aborting.')
     salt, iv = os.urandom(16), os.urandom(12)
     key = hashlib.pbkdf2_hmac('sha256', pw.encode(), salt, ITER, dklen=32)
     ct = AESGCM(key).encrypt(iv, src, None)
