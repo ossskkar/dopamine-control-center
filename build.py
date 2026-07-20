@@ -93,7 +93,13 @@ else window.addEventListener('load',tryCached);
 def main():
     here = os.path.dirname(os.path.abspath(__file__))
     src = open(os.path.join(here, 'app.html'), 'rb').read()
-    pw = sys.argv[1] if len(sys.argv) > 1 else getpass.getpass('GitHub token: ')
+    tokenfile = os.path.join(here, '.token')
+    if len(sys.argv) > 1:
+        pw = sys.argv[1]
+    elif os.path.exists(tokenfile):
+        pw = open(tokenfile).read().strip()
+    else:
+        pw = getpass.getpass('GitHub token: ')
     if not pw:
         sys.exit('Empty token, aborting.')
     salt, iv = os.urandom(16), os.urandom(12)

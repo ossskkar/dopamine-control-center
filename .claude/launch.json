@@ -2,9 +2,9 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "p100k",
-      "runtimeExecutable": "sh",
-      "runtimeArgs": ["-c", "cd /Users/oscar/Documents/claude-projects/dopamine-control-center && exec python3 -m http.server 8100"],
+      "name": "p100k-dev",
+      "runtimeExecutable": "python3",
+      "runtimeArgs": ["-c", "import http.server,socketserver,functools;h=functools.partial(http.server.SimpleHTTPRequestHandler,directory='/Users/oscar/Documents/claude-projects/dopamine-control-center');s=socketserver.TCPServer(('127.0.0.1',8100),h);s.allow_reuse_address=True;s.serve_forever()"],
       "port": 8100
     }
   ]

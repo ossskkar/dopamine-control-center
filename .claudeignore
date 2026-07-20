@@ -38,3 +38,6 @@ Gemfile.lock
 *.mp3
 *.pdf
 *.ico
+
+# Secrets
+.token
