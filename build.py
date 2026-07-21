@@ -23,16 +23,20 @@ TEMPLATE = r"""<!DOCTYPE html>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Dopamine Control Center</title>
 <style>
-:root{--ink:#0d0b1e;--ink-2:#161330;--ink-3:#201b42;--line:#2d2756;--moss:#8b86b8;--fog:#cfcbe8;--white:#f4f2ff;--amber:#fb5fa6;--grad:linear-gradient(135deg,#7c3aed,#fb5fa6)}
-*{margin:0;padding:0;box-sizing:border-box}
-body{background:var(--ink);color:var(--fog);font-family:"Avenir Next",Avenir,"Segoe UI",system-ui,sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;background-image:radial-gradient(ellipse 90% 40% at 15% -5%, #7c3aed33 0%, transparent 55%),radial-gradient(ellipse 70% 35% at 95% 0%, #fb5fa622 0%, transparent 55%)}
-.lock{background:var(--ink-2);border:1px solid var(--line);border-radius:18px;padding:30px 26px;width:100%;max-width:360px;box-shadow:0 8px 24px #05041077;text-align:center}
-.brand{font-family:"Arial Narrow","Helvetica Neue Condensed","Segoe UI",sans-serif;font-stretch:condensed;font-weight:800;font-size:1.55rem;line-height:1.1;letter-spacing:.12em;color:var(--white);text-transform:uppercase;margin-bottom:6px}
-.brand span{background:linear-gradient(90deg,#a78bfa,#fb5fa6);-webkit-background-clip:text;background-clip:text;color:transparent}
-.sub{font-size:.62rem;text-transform:uppercase;letter-spacing:.22em;color:var(--moss);margin-bottom:22px}
-input{width:100%;background:var(--ink-3);border:1px solid var(--line);border-radius:10px;color:var(--white);padding:13px 14px;font-size:1rem;font-family:inherit;outline:none;text-align:center;margin-bottom:12px}
-input:focus{border-color:var(--amber)}
-button{width:100%;background:var(--grad);color:#fff;border:none;border-radius:10px;padding:13px;font-size:.75rem;text-transform:uppercase;letter-spacing:.15em;font-weight:800;cursor:pointer;font-family:inherit;box-shadow:0 4px 18px #7c3aed55}
+/* the lock screen is the hub's front door, so it wears the hub's blue/cyan —
+   not Project 100K's violet. Type sizes match .hub-title / .hub-tag exactly. */
+:root{--ink:#0d0b1e;--ink-2:#161330;--ink-3:#201b42;--line:#26386b;--fog:#cfcbe8;--white:#f4f2ff;--cyan:#38dbd0;--grad:linear-gradient(135deg,#2d6cf6,#38dbd0)}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{background:var(--ink);color:var(--fog);font-family:"Avenir Next",Avenir,"Segoe UI",system-ui,sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;background-image:radial-gradient(ellipse 90% 40% at 15% -5%, #2d6cf633 0%, transparent 55%),radial-gradient(ellipse 70% 35% at 95% 0%, #38dbd022 0%, transparent 55%)}
+.lock{background:var(--ink-2);border:1px solid var(--line);border-radius:24px;padding:34px 26px 30px;width:100%;max-width:360px;box-shadow:0 8px 24px #05041077;text-align:center;position:relative;overflow:hidden}
+.lock::after{content:"";position:absolute;inset:0;background:radial-gradient(ellipse 80% 50% at 80% -10%, #2d6cf62e, transparent 60%);pointer-events:none}
+.brand{font-family:"Arial Narrow","Helvetica Neue Condensed","Segoe UI",sans-serif;font-stretch:condensed;font-weight:800;font-size:2rem;line-height:1.15;letter-spacing:.14em;color:var(--white);text-transform:uppercase}
+.brand span{background:linear-gradient(90deg,#7fb3ff,#38dbd0);-webkit-background-clip:text;background-clip:text;color:transparent}
+.sub{font-size:.66rem;text-transform:uppercase;letter-spacing:.3em;color:#7f9fca;margin:8px 0 26px}
+input{position:relative;z-index:1;width:100%;background:var(--ink-3);border:1px solid var(--line);border-radius:10px;color:var(--white);padding:13px 14px;font-size:1rem;font-family:inherit;outline:none;text-align:center;margin-bottom:12px}
+input:focus{border-color:var(--cyan)}
+button{position:relative;z-index:1;width:100%;background:var(--grad);color:#fff;border:none;border-radius:10px;padding:13px;font-size:.75rem;text-transform:uppercase;letter-spacing:.15em;font-weight:800;cursor:pointer;font-family:inherit;box-shadow:0 4px 18px #2d6cf655}
+button:active{transform:scale(.98)}
 button:disabled{opacity:.5}
 .err{font-size:.72rem;color:#ff6b5e;margin-top:12px;min-height:1em}
 </style>
@@ -40,7 +44,7 @@ button:disabled{opacity:.5}
 <body>
 <form class="lock" id="f">
   <div class="brand">Dopamine<br><span>Control Center</span></div>
-  <div class="sub">Private — enter your GitHub token</div>
+  <div class="sub">Private — enter your token</div>
   <input type="password" id="pw" autocomplete="off" autofocus>
   <button id="go">Unlock</button>
   <div class="err" id="err"></div>
