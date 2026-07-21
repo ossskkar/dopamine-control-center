@@ -17,7 +17,12 @@ out="$root/index.html"
 # only guard commits that actually ship the build artifact
 git diff --cached --name-only | grep -qx 'index.html' || exit 0
 
-if [ ! -f "$out" ] || [ "$src" -nt "$out" ]; then
+# sub-second mtimes, and "same instant" counts as stale: test's own -nt only has
+# whole-second resolution, so an edit and a build in the same second would slip
+# through — and the safe way to be wrong here is to block.
+mtime(){ stat -f %Fm "$1" 2>/dev/null || stat -c %Y "$1" 2>/dev/null; }
+
+if [ ! -f "$out" ] || [ "$(awk -v a="$(mtime "$src")" -v b="$(mtime "$out")" 'BEGIN{print (a>=b)?1:0}')" = 1 ]; then
   echo "index.html is older than app.html — this commit would ship a stale build."
   echo "run: python3 build.py"
   echo "(to commit anyway: git commit --no-verify)"
