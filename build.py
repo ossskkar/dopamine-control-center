@@ -146,7 +146,13 @@ def main():
     ct = AESGCM(key).encrypt(iv, src, None)
     payload = base64.b64encode(salt + iv + ct).decode()
     out = TEMPLATE.replace('__PAYLOAD__', payload).replace('__ITER__', str(ITER))
-    open(os.path.join(here, 'index.html'), 'w').write(out)
+    outpath = os.path.join(here, 'index.html')
+    srcpath = os.path.join(here, 'app.html')
+    stale = os.path.getmtime(outpath) - os.path.getmtime(srcpath) if os.path.exists(outpath) else None
+    open(outpath, 'w').write(out)
+    if stale is not None and stale < 0:
+        mins = int(-stale // 60)
+        print(f'app.html had been {mins} min ahead of the old index.html — now rebuilt.')
     print(f'index.html written ({len(out)//1024} KB) — deploy it, keep app.html private.')
 
 if __name__ == '__main__':

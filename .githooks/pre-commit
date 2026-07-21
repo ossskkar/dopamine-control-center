@@ -1,0 +1,27 @@
+#!/bin/sh
+# Refuse to commit a stale build.
+#
+# app.html is gitignored, so `git status` stays clean no matter how much the
+# source changed — the only evidence a build is missing is that app.html is
+# newer than the index.html build.py produced.
+#
+# Armed with:  git config core.hooksPath .githooks
+
+root=$(git rev-parse --show-toplevel) || exit 0
+src="$root/app.html"
+out="$root/index.html"
+
+# fresh clone with no source: nothing to compare against
+[ -f "$src" ] || exit 0
+
+# only guard commits that actually ship the build artifact
+git diff --cached --name-only | grep -qx 'index.html' || exit 0
+
+if [ ! -f "$out" ] || [ "$src" -nt "$out" ]; then
+  echo "index.html is older than app.html — this commit would ship a stale build."
+  echo "run: python3 build.py"
+  echo "(to commit anyway: git commit --no-verify)"
+  exit 1
+fi
+
+exit 0
