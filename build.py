@@ -10,7 +10,8 @@ Usage:  python3 build.py            (prompts for token)
 
 Deploy index.html to GitHub Pages. Keep app.html out of git (.gitignore).
 """
-import base64, os, sys, getpass, hashlib
+import base64, os, sys, getpass, hashlib, urllib.request
+from datetime import datetime
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
 
 ITER = 600_000
@@ -90,6 +91,33 @@ else window.addEventListener('load',tryCached);
 </html>
 """
 
+def token_expiry(pw):
+    """When does this token expire? Returns ISO-8601 UTC, or None.
+
+    The app can't ask GitHub itself — the expiry header isn't CORS-exposed to
+    browser JS — so we stamp it into the page at build time. Classic PATs with
+    no expiry return None, and the reminder simply never fires.
+    """
+    try:
+        req = urllib.request.Request('https://api.github.com/user', headers={
+            'Authorization': 'Bearer ' + pw,
+            'Accept': 'application/vnd.github+json',
+            'User-Agent': 'p100k-build',
+        })
+        with urllib.request.urlopen(req, timeout=10) as r:
+            raw = r.headers.get('github-authentication-token-expiration')
+    except Exception:
+        return None
+    if not raw:
+        return None
+    try:
+        # header looks like '2026-10-18 20:12:57 UTC'
+        return datetime.strptime(raw.strip().replace(' UTC', ''),
+                                 '%Y-%m-%d %H:%M:%S').strftime('%Y-%m-%dT%H:%M:%SZ')
+    except ValueError:
+        return None
+
+
 def main():
     here = os.path.dirname(os.path.abspath(__file__))
     src = open(os.path.join(here, 'app.html'), 'rb').read()
@@ -102,6 +130,13 @@ def main():
         pw = getpass.getpass('GitHub token: ')
     if not pw:
         sys.exit('Empty token, aborting.')
+    exp = token_expiry(pw)
+    if exp:
+        src = src.replace(b'__TOKEN_EXP__', exp.encode())
+        left = (datetime.strptime(exp, '%Y-%m-%dT%H:%M:%SZ') - datetime.utcnow()).days
+        print(f'token expires {exp} ({left} days) — reminder fires with 7 days left')
+    else:
+        print('could not read token expiry (offline, or a token that never expires) — no reminder')
     salt, iv = os.urandom(16), os.urandom(12)
     key = hashlib.pbkdf2_hmac('sha256', pw.encode(), salt, ITER, dklen=32)
     ct = AESGCM(key).encrypt(iv, src, None)
