@@ -21,13 +21,13 @@ TEMPLATE = r"""<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>PROJECT 100K</title>
+<title>Dopamine Control Center</title>
 <style>
 :root{--ink:#0d0b1e;--ink-2:#161330;--ink-3:#201b42;--line:#2d2756;--moss:#8b86b8;--fog:#cfcbe8;--white:#f4f2ff;--amber:#fb5fa6;--grad:linear-gradient(135deg,#7c3aed,#fb5fa6)}
 *{margin:0;padding:0;box-sizing:border-box}
 body{background:var(--ink);color:var(--fog);font-family:"Avenir Next",Avenir,"Segoe UI",system-ui,sans-serif;min-height:100vh;display:flex;align-items:center;justify-content:center;padding:20px;background-image:radial-gradient(ellipse 90% 40% at 15% -5%, #7c3aed33 0%, transparent 55%),radial-gradient(ellipse 70% 35% at 95% 0%, #fb5fa622 0%, transparent 55%)}
 .lock{background:var(--ink-2);border:1px solid var(--line);border-radius:18px;padding:30px 26px;width:100%;max-width:360px;box-shadow:0 8px 24px #05041077;text-align:center}
-.brand{font-family:"Arial Narrow","Helvetica Neue Condensed","Segoe UI",sans-serif;font-stretch:condensed;font-weight:800;font-size:1.55rem;letter-spacing:.12em;color:var(--white);text-transform:uppercase;margin-bottom:6px}
+.brand{font-family:"Arial Narrow","Helvetica Neue Condensed","Segoe UI",sans-serif;font-stretch:condensed;font-weight:800;font-size:1.55rem;line-height:1.1;letter-spacing:.12em;color:var(--white);text-transform:uppercase;margin-bottom:6px}
 .brand span{background:linear-gradient(90deg,#a78bfa,#fb5fa6);-webkit-background-clip:text;background-clip:text;color:transparent}
 .sub{font-size:.62rem;text-transform:uppercase;letter-spacing:.22em;color:var(--moss);margin-bottom:22px}
 input{width:100%;background:var(--ink-3);border:1px solid var(--line);border-radius:10px;color:var(--white);padding:13px 14px;font-size:1rem;font-family:inherit;outline:none;text-align:center;margin-bottom:12px}
@@ -39,7 +39,7 @@ button:disabled{opacity:.5}
 </head>
 <body>
 <form class="lock" id="f">
-  <div class="brand">PROJECT <span>100K</span></div>
+  <div class="brand">Dopamine<br><span>Control Center</span></div>
   <div class="sub">Private — enter your GitHub token</div>
   <input type="password" id="pw" autocomplete="off" autofocus>
   <button id="go">Unlock</button>
