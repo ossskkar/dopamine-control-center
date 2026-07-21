@@ -5,6 +5,7 @@
   },
   "output": {
     "filePath": "repomix-output.txt",
+    "instructionFilePath": "repomix-instruction.md",
     "style": "xml",
     "filePathStyle": "target-relative",
     "parsableStyle": false,
@@ -30,10 +31,10 @@
   },
   "include": [],
   "ignore": {
-    "useGitignore": true,
+    "useGitignore": false,
     "useDotIgnore": true,
     "useDefaultPatterns": true,
-    "customPatterns": []
+    "customPatterns": [".DS_Store", ".git/**"]
   },
   "security": {
     "enableSecurityCheck": true
