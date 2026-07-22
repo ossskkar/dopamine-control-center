@@ -49,7 +49,7 @@ Existing life projects are typically **Finance, Health, Home, Admin & paperwork,
 
    Adjust the `p100k-data` path if it lives elsewhere (`$P100K_DATA` overrides the data path for the script).
 
-5. **Confirm** to the user in one line: the task title, the project it landed in, and the due date if any. Don't dump the JSON.
+5. **Confirm** with a very short acknowledgement — e.g. `Done` (at most add the project in a few words, like `Done — added to Health`). No summary, no JSON, no next-step suggestions unless the user asks.
 
 ## Notes
 

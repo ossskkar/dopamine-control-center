@@ -63,7 +63,7 @@ python3 $M step-rm     "budget" 1
      && git push -u origin claude/load-wcsj46
    ```
 
-4. Confirm in one line. Don't dump JSON unless asked.
+4. Confirm with a very short acknowledgement — e.g. `Done` (add a couple of words only if it aids clarity, like `Done — moved to Admin`). No summaries, no JSON, no follow-up suggestions unless the user asks. (Read commands like `projects`/`tasks` still return the info requested, kept brief.)
 
 ## Notes
 
