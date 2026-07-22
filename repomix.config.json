@@ -34,7 +34,12 @@
     "useGitignore": false,
     "useDotIgnore": true,
     "useDefaultPatterns": true,
-    "customPatterns": [".DS_Store", ".git/**"]
+    "customPatterns": [
+      ".DS_Store",
+      ".git/**",
+      "app.html",
+      ".claude/skills/**/*.py"
+    ]
   },
   "security": {
     "enableSecurityCheck": true
