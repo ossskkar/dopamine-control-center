@@ -14,7 +14,7 @@ Data model (observed from the live data — do not reshape it):
         "tasks": [
             {"id": <tid "t…">, "title": str, "note": str,
              "due": "" | "YYYY-MM-DD", "done": bool,
-             "steps": [ {"id": <sid "s…">, "title": str, "done": bool}, ... ]},
+             "steps": [ {"id": <sid "s…">, "title": str, "done": bool, "due": ""}, ... ]},
             ...
         ],
     }
@@ -329,7 +329,7 @@ def cmd_step_add(d, path, a):
     t = d["todo"][pid]["tasks"][i]
     if not a.text.strip():
         die("--text is empty", 2)
-    step = {"id": gen_id("s"), "title": a.text.strip(), "done": False}
+    step = {"id": gen_id("s"), "title": a.text.strip(), "done": False, "due": ""}
     t.setdefault("steps", []).append(step)
     touch(d, pid)
     save(path, d)

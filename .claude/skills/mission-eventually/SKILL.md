@@ -15,7 +15,7 @@ Full-control manager for **Mission: Eventually** — the app's display name for 
 
 - **Project** `{id:"p…", name, note, ts, tasks[]}`, keyed by id. Display order = key order.
 - **Task** `{id:"t…", title, note, due, done, steps[]}`.
-- **Step** `{id:"s…", title, done}` (same label key as tasks/resources).
+- **Step** `{id:"s…", title, done, due}` (label key `title`, matching the app — verified against app-written data).
 - `meta["_td_<projectId>"]` = per-project sync timestamp.
 
 ## Driving it
@@ -65,5 +65,6 @@ python3 $M step-rm     "budget" 1
 ## Notes
 
 - Destructive ops (`project-rm`, `task-rm`) can't be undone from here — confirm with the user before deleting a project (it takes its tasks with it).
-- Step label is stored under `title` (matching tasks/resources). If the app still renders steps blank, share `app.html` and I'll align the exact field names.
+- Step schema `{id, title, done, due}` is verified against data the app itself wrote — the app renders the label from `title`.
+- **Sync note:** the app pushes its full local state and resolves per project by `meta._td_<pid>`. When editing data.json server-side, bump the affected project's `_td_` (the helper does this on every write) so the app adopts your version instead of clobbering it on next sync — and let the app sync once after.
 - This skill only reads/writes `todo` and its `meta._td_` timestamps — never other data areas.
