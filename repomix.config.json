@@ -37,7 +37,6 @@
     "customPatterns": [
       ".DS_Store",
       ".git/**",
-      "app.html",
       ".claude/skills/**/*.py"
     ]
   },
