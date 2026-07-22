@@ -1,66 +1,57 @@
 ---
 name: mission-eventually
-description: Full control over the "Mission Eventually" system — a separate long-term / someday board of big missions, stored under the top-level "mission" key in p100k-data/data.json. Use when the user talks about their missions, someday/eventually goals, or long-term ambitions and wants to add, list, view, edit, re-status (someday/active/done), break into steps, check off steps, or delete them. This is NOT the todo list — do not use it for everyday todo items (that is the separate add-todo skill), and never touch the "todo" data here.
+description: Full control over the "Mission: Eventually" board — the app's name for the to-do board itself (the top-level "todo" object in p100k-data/data.json), with its projects, tasks, due dates and steps. Use when the user wants to manage the board broadly: list/add/rename/reorder/delete projects, edit/complete/move/delete tasks, or add and check off a task's steps. Distinct skill from add-todo, which only quick-captures one new task; both act on the same real board because it is the one board the app renders.
 ---
 
 # mission-eventually
 
-Full-control manager for **Mission Eventually**: the long-term / "someday" board. It is a distinct system from the todo list.
+Full-control manager for **Mission: Eventually** — the app's display name for the to-do board (`todo` data). This skill can do anything to the board's structure and contents; `add-todo` is the lightweight "just add one task" capture. They are separate skills that share the same real data, because Mission: Eventually *is* that board.
 
-**Boundary:** this skill only ever reads and writes the top-level `mission` object and its `meta._mi_<id>` timestamps. It must never modify the `todo` object. Conversely, the `add-todo` skill handles everyday todos — if the user is adding a routine task ("remind me to…", "add a todo…"), that is add-todo, not this. When unsure which system the user means, ask.
+**When to use which:** a plain "add a todo / remind me to X" → `add-todo`. Anything else about the board — listing, editing, completing, moving, reordering, deleting, steps, projects → this skill. When unsure, this skill's `tasks`/`projects` read commands are safe to explore with.
 
-## Data shape
+## Data model (do not reshape it)
 
-`p100k-data/data.json` (compact single-line JSON — never reformat) holds:
+`p100k-data/data.json` is compact single-line JSON — never reformat. Under `todo`:
 
-- `mission`: object keyed by mission id (`m…`). Each mission is
-  `{id, title, note, due, status, steps[], ts}`.
-  - `status` ∈ `someday` | `active` | `done` (default `someday` — the "eventually" state).
-  - `steps`: ordered `{id, text, done}`.
-- `meta["_mi_<id>"]`: per-mission last-modified ms timestamp (sync).
+- **Project** `{id:"p…", name, note, ts, tasks[]}`, keyed by id. Display order = key order.
+- **Task** `{id:"t…", title, note, due, done, steps[]}`.
+- **Step** `{id:"s…", text, done}`.
+- `meta["_td_<projectId>"]` = per-project sync timestamp.
 
 ## Driving it
 
-Everything goes through the helper (it handles ids, the meta timestamp, validation, and byte-exact formatting). Each call prints one JSON line describing the result — read it, then tell the user in plain language. Run from the skill dir or give an absolute path.
+All ops go through the helper (ids, `_td_` timestamps, validation, byte-exact formatting handled for you). Each prints one JSON line — read it, then reply in plain language. `PREF`/`TREF` match by id or by a name/title substring; ambiguous matches error with candidates.
 
 ```bash
 M=".claude/skills/mission-eventually/mission.py"
 
-# create
-python3 $M add --title "Run a sub-4h marathon" --note "after the Oct race" --due 2027-05-01 --status active
+# --- projects ---
+python3 $M projects                              # list with task counts
+python3 $M project-add  --name "Travel" --note "trips to plan"
+python3 $M project-edit "Travel" --name "Trips"
+python3 $M project-move "Trips" --to 1           # reorder to position 1
+python3 $M project-rm   "Trips"                  # deletes its tasks too
 
-# list (optionally filter by status)
-python3 $M list
-python3 $M list --status active
+# --- tasks (TREF = task id or title substring, any project) ---
+python3 $M tasks                                 # all tasks; or: tasks "Health"
+python3 $M task-add  "Health" --title "Book dentist" --due 2026-08-01
+python3 $M task-edit "dentist" --note "molar" --due 2026-08-05
+python3 $M task-done "dentist"                   # / task-undone
+python3 $M task-move "dentist" --to "Admin"      # move between projects
+python3 $M task-rm   "dentist"
 
-# view one in full
-python3 $M get "marathon"
-
-# edit fields (only the flags you pass change; --due "" clears the date)
-python3 $M update "marathon" --note "new plan" --due 2027-06-01
-
-# change status
-python3 $M status "marathon" done          # someday | active | done
-
-# steps
-python3 $M step "marathon" add "Build a base mileage of 50km/week"
-python3 $M step "marathon" done 1           # 1-based index, or a step id
-python3 $M step "marathon" undone 1
-python3 $M step "marathon" rm 1
-
-# delete a whole mission
-python3 $M rm "marathon"
+# --- steps within a task ---
+python3 $M step-add    "budget" --text "Export last 3 months"
+python3 $M step-done   "budget" 1                # 1-based index or step id
+python3 $M step-undone "budget" 1
+python3 $M step-rm     "budget" 1
 ```
-
-`REF` (the `"marathon"` above) matches by exact mission id first, else a
-case-insensitive title substring. If a title is ambiguous the tool errors with
-the candidates — pass the id it prints.
 
 ## Workflow
 
-1. Map what the user said to the right subcommand(s). Parse a `due` date only if clearly stated; convert relative dates ("next spring", "May 2027") to `YYYY-MM-DD`.
-2. Run the helper. For several changes in one breath, run it several times.
-3. **Sync** to `p100k-data` on branch `claude/load-wcsj46`:
+1. Map the request to subcommand(s). Parse a `due` date only when clearly stated; convert relative dates to `YYYY-MM-DD`.
+2. Run the helper (several times for several changes). Read-only `projects`/`tasks` need no commit.
+3. **Sync** to `p100k-data` on `claude/load-wcsj46` (per the branch rules), then it is pushed onward as configured:
 
    ```bash
    cd ../p100k-data \
@@ -69,10 +60,10 @@ the candidates — pass the id it prints.
      && git push -u origin claude/load-wcsj46
    ```
 
-4. Confirm to the user in one line — the mission and what changed. Don't dump JSON unless they ask to see raw data.
+4. Confirm in one line. Don't dump JSON unless asked.
 
 ## Notes
 
-- `list`/`get` are read-only; no commit needed for those.
-- New missions default to `someday` status — that is the "eventually" bucket. Promote to `active` when they start, `done` when finished.
-- The app does not yet render the `mission` key; this system is managed here in Claude Code and stored in the data repo. Say so if the user expects to see it in the app.
+- Destructive ops (`project-rm`, `task-rm`) can't be undone from here — confirm with the user before deleting a project (it takes its tasks with it).
+- Step shape (`{id, text, done}`) is inferred, since no live task has steps yet; if steps don't render in the app, share `app.html` and I'll align the field names exactly.
+- This skill only reads/writes `todo` and its `meta._td_` timestamps — never other data areas.

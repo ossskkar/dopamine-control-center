@@ -1,38 +1,54 @@
 #!/usr/bin/env python3
-"""Full-control CLI for the "Mission Eventually" system (p100k-data/data.json).
+"""Full-control CLI for the "Mission: Eventually" board (p100k-data/data.json).
 
-Mission Eventually is a separate long-term / someday board — NOT the todo list.
-Missions live under the top-level "mission" object, keyed by mission id:
+"Mission: Eventually" is the app's display name for the to-do board — the
+top-level "todo" object. This tool gives full control over that board's
+projects, tasks and steps. It is a SEPARATE skill from add-todo (which only
+quick-captures a single task); both act on the same real board because that is
+the one system the app renders.
 
-    mission[<mid>] = {
-        "id":    <mid>,
-        "title": str,
-        "note":  str,
-        "due":   "" | "YYYY-MM-DD",
-        "status": "someday" | "active" | "done",
-        "steps": [ {"id": <sid>, "text": str, "done": bool}, ... ],
-        "ts":    <created ms>,
+Data model (observed from the live data — do not reshape it):
+
+    todo[<pid "p…">] = {
+        "id": pid, "name": str, "note": str, "ts": <ms>,
+        "tasks": [
+            {"id": <tid "t…">, "title": str, "note": str,
+             "due": "" | "YYYY-MM-DD", "done": bool,
+             "steps": [ {"id": <sid "s…">, "text": str, "done": bool}, ... ]},
+            ...
+        ],
     }
+    meta["_td_<pid>"] = <ms>   # per-project sync timestamp
 
-Each mission has a sync timestamp at meta["_mi_<mid>"], mirroring the app's
-per-item "_td_" convention for todos. The file is rewritten in the app's exact
-compact, UTF-8, newline-free format so diffs stay minimal.
+The file is rewritten in the app's exact compact, UTF-8, newline-free format.
+Every subcommand prints one JSON result line. This tool never reshapes tasks
+or projects beyond the fields above and never touches non-todo data.
 
-Subcommands (every one prints a JSON result line):
-    add     --title T [--note N] [--due D] [--status S]
-    list    [--status S]
-    get     REF
-    update  REF [--title T] [--note N] [--due D] [--status S]
-    status  REF STATE              (STATE = someday|active|done)
-    step    REF add TEXT
-    step    REF done  STEP
-    step    REF undone STEP
-    step    REF rm    STEP
-    rm      REF
+Project subcommands:
+    projects
+    project-add    --name NAME [--note NOTE]
+    project-edit   PREF [--name NAME] [--note NOTE]
+    project-move   PREF --to POS            (1-based position)
+    project-rm     PREF                     (deletes its tasks too)
 
-REF resolves a mission by exact id, else by case-insensitive title substring.
-An ambiguous title match errors with the candidate list instead of guessing.
-STEP is a 1-based index or a step id. This tool never touches the todo data.
+Task subcommands (TREF matches by task id or title substring, any project):
+    tasks          [PREF]
+    task-add       PREF --title T [--note N] [--due D]
+    task-edit      TREF [--title T] [--note N] [--due D]
+    task-done      TREF
+    task-undone    TREF
+    task-move      TREF --to PREF
+    task-rm        TREF
+
+Step subcommands (SREF is a 1-based index or a step id, within that task):
+    step-add       TREF --text TEXT
+    step-done      TREF SREF
+    step-undone    TREF SREF
+    step-rm        TREF SREF
+
+PREF/TREF resolve by exact id first, else case-insensitive name/title
+substring; an ambiguous match errors with the candidate list instead of
+guessing.
 """
 import argparse
 import json
@@ -42,7 +58,6 @@ import string
 import sys
 import time
 
-STATUSES = ("someday", "active", "done")
 _ALPHABET = "0123456789abcdefghijklmnopqrstuvwxyz"
 
 
@@ -65,6 +80,11 @@ def now_ms() -> int:
     return int(time.time() * 1000)
 
 
+def die(msg: str, code: int = 1):
+    print(f"error: {msg}", file=sys.stderr)
+    raise SystemExit(code)
+
+
 def resolve_data_path(explicit: str) -> str:
     if explicit:
         return explicit
@@ -81,17 +101,12 @@ def resolve_data_path(explicit: str) -> str:
     return next((c for c in candidates if c), os.path.expanduser("~/p100k-data/data.json"))
 
 
-def die(msg: str, code: int = 1):
-    print(f"error: {msg}", file=sys.stderr)
-    raise SystemExit(code)
-
-
 def load(path: str):
     if not os.path.exists(path):
         die(f"data.json not found at {path}")
     with open(path, encoding="utf-8") as f:
         d = json.load(f)
-    d.setdefault("mission", {})
+    d.setdefault("todo", {})
     d.setdefault("meta", {})
     return d
 
@@ -99,6 +114,10 @@ def load(path: str):
 def save(path: str, d: dict):
     with open(path, "w", encoding="utf-8") as f:
         f.write(json.dumps(d, ensure_ascii=False, separators=(",", ":")))
+
+
+def touch(d: dict, pid: str):
+    d["meta"]["_td_" + pid] = now_ms()
 
 
 def valid_due(due: str):
@@ -110,25 +129,45 @@ def valid_due(due: str):
         die(f"--due '{due}' is not YYYY-MM-DD", 2)
 
 
-def resolve(mission: dict, ref: str) -> str:
-    if ref in mission:
+def out(obj):
+    print(json.dumps(obj, ensure_ascii=False))
+
+
+def resolve_project(todo: dict, ref: str) -> str:
+    if ref in todo:
         return ref
     q = ref.strip().lower()
-    hits = [mid for mid, m in mission.items() if q and q in m.get("title", "").strip().lower()]
+    hits = [pid for pid, p in todo.items() if q and q in p.get("name", "").strip().lower()]
     if not hits:
-        die(f"no mission matches '{ref}'")
+        die(f"no project matches '{ref}'")
     if len(hits) > 1:
-        names = "; ".join(f"{mid}={mission[mid]['title']!r}" for mid in hits)
-        die(f"'{ref}' is ambiguous — matches: {names}. Use an id.")
+        names = "; ".join(f"{pid}={todo[pid]['name']!r}" for pid in hits)
+        die(f"project '{ref}' is ambiguous — matches: {names}. Use an id.")
     return hits[0]
 
 
-def touch(d: dict, mid: str):
-    d["meta"]["_mi_" + mid] = now_ms()
+def resolve_task(todo: dict, ref: str):
+    """Return (pid, task_index) for a task matched across all projects."""
+    q = ref.strip().lower()
+    hits = []
+    for pid, p in todo.items():
+        for i, t in enumerate(p.get("tasks", [])):
+            if t.get("id") == ref:
+                return pid, i
+            if q and q in t.get("title", "").strip().lower():
+                hits.append((pid, i, t.get("title", "")))
+    if not hits:
+        die(f"no task matches '{ref}'")
+    if len(hits) > 1:
+        names = "; ".join(f"{todo[pid]['tasks'][i]['id']}={title!r} (in {todo[pid]['name']})"
+                          for pid, i, title in hits)
+        die(f"task '{ref}' is ambiguous — matches: {names}. Use an id.")
+    pid, i, _ = hits[0]
+    return pid, i
 
 
-def find_step(m: dict, ref: str) -> int:
-    steps = m.get("steps", [])
+def resolve_step(task: dict, ref: str) -> int:
+    steps = task.get("steps", [])
     for i, s in enumerate(steps):
         if s.get("id") == ref:
             return i
@@ -136,163 +175,242 @@ def find_step(m: dict, ref: str) -> int:
         idx = int(ref) - 1
         if 0 <= idx < len(steps):
             return idx
-    die(f"no step '{ref}' in mission {m['id']}")
+    die(f"no step '{ref}' in task {task['id']}")
 
 
-def out(obj):
-    print(json.dumps(obj, ensure_ascii=False))
+# ---- projects ------------------------------------------------------------
+
+def cmd_projects(d, path, a):
+    rows = []
+    for pid, p in d["todo"].items():
+        tasks = p.get("tasks", [])
+        rows.append({
+            "id": pid, "name": p.get("name", ""), "note": p.get("note", ""),
+            "tasks_done": sum(1 for t in tasks if t.get("done")),
+            "tasks_total": len(tasks),
+        })
+    out({"action": "projects", "count": len(rows), "projects": rows})
 
 
-# ---- subcommand handlers -------------------------------------------------
+def cmd_project_add(d, path, a):
+    if not a.name.strip():
+        die("--name is empty", 2)
+    pid = gen_id("p")
+    d["todo"][pid] = {"id": pid, "name": a.name.strip(), "note": (a.note or "").strip(),
+                      "ts": now_ms(), "tasks": []}
+    touch(d, pid)
+    save(path, d)
+    out({"action": "project-add", "project": d["todo"][pid]})
 
-def cmd_add(d, path, a):
+
+def cmd_project_edit(d, path, a):
+    pid = resolve_project(d["todo"], a.ref)
+    p = d["todo"][pid]
+    if a.name is not None:
+        if not a.name.strip():
+            die("--name is empty", 2)
+        p["name"] = a.name.strip()
+    if a.note is not None:
+        p["note"] = a.note.strip()
+    touch(d, pid)
+    save(path, d)
+    out({"action": "project-edit", "project": p})
+
+
+def cmd_project_move(d, path, a):
+    pid = resolve_project(d["todo"], a.ref)
+    ids = [k for k in d["todo"].keys() if k != pid]
+    pos = max(1, min(a.to, len(ids) + 1)) - 1
+    ids.insert(pos, pid)
+    d["todo"] = {k: d["todo"][k] for k in ids}
+    touch(d, pid)
+    save(path, d)
+    out({"action": "project-move", "order": [{"id": k, "name": d["todo"][k]["name"]} for k in ids]})
+
+
+def cmd_project_rm(d, path, a):
+    pid = resolve_project(d["todo"], a.ref)
+    removed = d["todo"].pop(pid)
+    d["meta"].pop("_td_" + pid, None)
+    save(path, d)
+    out({"action": "project-rm", "removed_project": removed["name"],
+         "removed_tasks": len(removed.get("tasks", []))})
+
+
+# ---- tasks ---------------------------------------------------------------
+
+def cmd_tasks(d, path, a):
+    pids = [resolve_project(d["todo"], a.ref)] if a.ref else list(d["todo"].keys())
+    rows = []
+    for pid in pids:
+        p = d["todo"][pid]
+        for t in p.get("tasks", []):
+            steps = t.get("steps", [])
+            rows.append({
+                "id": t["id"], "title": t.get("title", ""), "project": p.get("name", ""),
+                "due": t.get("due", ""), "done": t.get("done", False),
+                "steps_done": sum(1 for s in steps if s.get("done")), "steps_total": len(steps),
+            })
+    out({"action": "tasks", "count": len(rows), "tasks": rows})
+
+
+def cmd_task_add(d, path, a):
+    pid = resolve_project(d["todo"], a.ref)
     if not a.title.strip():
         die("--title is empty", 2)
     valid_due(a.due)
-    status = a.status or "someday"
-    if status not in STATUSES:
-        die(f"--status must be one of {STATUSES}", 2)
-    mid = gen_id("m")
-    m = {
-        "id": mid,
-        "title": a.title.strip(),
-        "note": (a.note or "").strip(),
-        "due": a.due.strip(),
-        "status": status,
-        "steps": [],
-        "ts": now_ms(),
-    }
-    d["mission"][mid] = m
-    touch(d, mid)
+    task = {"id": gen_id("t"), "title": a.title.strip(), "note": (a.note or "").strip(),
+            "due": a.due.strip(), "done": False, "steps": []}
+    d["todo"][pid].setdefault("tasks", []).append(task)
+    touch(d, pid)
     save(path, d)
-    out({"action": "add", "mission": m})
+    out({"action": "task-add", "project": d["todo"][pid]["name"], "task": task})
 
 
-def cmd_list(d, path, a):
-    rows = []
-    for mid, m in d["mission"].items():
-        if a.status and m.get("status") != a.status:
-            continue
-        steps = m.get("steps", [])
-        rows.append({
-            "id": mid,
-            "title": m.get("title", ""),
-            "status": m.get("status", ""),
-            "due": m.get("due", ""),
-            "steps_done": sum(1 for s in steps if s.get("done")),
-            "steps_total": len(steps),
-        })
-    out({"action": "list", "count": len(rows), "missions": rows})
-
-
-def cmd_get(d, path, a):
-    mid = resolve(d["mission"], a.ref)
-    out({"action": "get", "mission": d["mission"][mid]})
-
-
-def cmd_update(d, path, a):
-    mid = resolve(d["mission"], a.ref)
-    m = d["mission"][mid]
+def cmd_task_edit(d, path, a):
+    pid, i = resolve_task(d["todo"], a.ref)
+    t = d["todo"][pid]["tasks"][i]
     if a.title is not None:
         if not a.title.strip():
             die("--title is empty", 2)
-        m["title"] = a.title.strip()
+        t["title"] = a.title.strip()
     if a.note is not None:
-        m["note"] = a.note.strip()
+        t["note"] = a.note.strip()
     if a.due is not None:
         valid_due(a.due)
-        m["due"] = a.due.strip()
-    if a.status is not None:
-        if a.status not in STATUSES:
-            die(f"--status must be one of {STATUSES}", 2)
-        m["status"] = a.status
-    touch(d, mid)
+        t["due"] = a.due.strip()
+    touch(d, pid)
     save(path, d)
-    out({"action": "update", "mission": m})
+    out({"action": "task-edit", "task": t})
 
 
-def cmd_status(d, path, a):
-    if a.state not in STATUSES:
-        die(f"status must be one of {STATUSES}", 2)
-    mid = resolve(d["mission"], a.ref)
-    d["mission"][mid]["status"] = a.state
-    touch(d, mid)
+def _set_done(d, path, ref, value):
+    pid, i = resolve_task(d["todo"], ref)
+    d["todo"][pid]["tasks"][i]["done"] = value
+    touch(d, pid)
     save(path, d)
-    out({"action": "status", "mission": d["mission"][mid]})
+    out({"action": "task-done" if value else "task-undone", "task": d["todo"][pid]["tasks"][i]})
 
 
-def cmd_step(d, path, a):
-    mid = resolve(d["mission"], a.ref)
-    m = d["mission"][mid]
-    m.setdefault("steps", [])
-    if a.op == "add":
-        text = " ".join(a.args).strip()
-        if not text:
-            die("step add needs text", 2)
-        step = {"id": gen_id("s"), "text": text, "done": False}
-        m["steps"].append(step)
-        result = step
-    elif a.op in ("done", "undone"):
-        if not a.args:
-            die(f"step {a.op} needs a step index or id", 2)
-        i = find_step(m, a.args[0])
-        m["steps"][i]["done"] = (a.op == "done")
-        result = m["steps"][i]
-    elif a.op == "rm":
-        if not a.args:
-            die("step rm needs a step index or id", 2)
-        i = find_step(m, a.args[0])
-        result = m["steps"].pop(i)
-    else:
-        die(f"unknown step op '{a.op}'", 2)
-    touch(d, mid)
+def cmd_task_done(d, path, a):
+    _set_done(d, path, a.ref, True)
+
+
+def cmd_task_undone(d, path, a):
+    _set_done(d, path, a.ref, False)
+
+
+def cmd_task_move(d, path, a):
+    pid, i = resolve_task(d["todo"], a.ref)
+    dest = resolve_project(d["todo"], a.to)
+    if dest == pid:
+        die("task already in that project", 2)
+    task = d["todo"][pid]["tasks"].pop(i)
+    d["todo"][dest].setdefault("tasks", []).append(task)
+    touch(d, pid)
+    touch(d, dest)
     save(path, d)
-    out({"action": "step", "op": a.op, "mission_id": mid, "step": result})
+    out({"action": "task-move", "task": task["title"],
+         "from": d["todo"][pid]["name"], "to": d["todo"][dest]["name"]})
 
 
-def cmd_rm(d, path, a):
-    mid = resolve(d["mission"], a.ref)
-    removed = d["mission"].pop(mid)
-    d["meta"].pop("_mi_" + mid, None)
+def cmd_task_rm(d, path, a):
+    pid, i = resolve_task(d["todo"], a.ref)
+    removed = d["todo"][pid]["tasks"].pop(i)
+    touch(d, pid)
     save(path, d)
-    out({"action": "rm", "removed": removed})
+    out({"action": "task-rm", "removed": removed["title"], "project": d["todo"][pid]["name"]})
+
+
+# ---- steps ---------------------------------------------------------------
+
+def cmd_step_add(d, path, a):
+    pid, i = resolve_task(d["todo"], a.ref)
+    t = d["todo"][pid]["tasks"][i]
+    if not a.text.strip():
+        die("--text is empty", 2)
+    step = {"id": gen_id("s"), "text": a.text.strip(), "done": False}
+    t.setdefault("steps", []).append(step)
+    touch(d, pid)
+    save(path, d)
+    out({"action": "step-add", "task": t["title"], "step": step})
+
+
+def _step_done(d, path, ref, sref, value):
+    pid, i = resolve_task(d["todo"], ref)
+    t = d["todo"][pid]["tasks"][i]
+    si = resolve_step(t, sref)
+    t["steps"][si]["done"] = value
+    touch(d, pid)
+    save(path, d)
+    out({"action": "step-done" if value else "step-undone", "task": t["title"], "step": t["steps"][si]})
+
+
+def cmd_step_done(d, path, a):
+    _step_done(d, path, a.ref, a.step, True)
+
+
+def cmd_step_undone(d, path, a):
+    _step_done(d, path, a.ref, a.step, False)
+
+
+def cmd_step_rm(d, path, a):
+    pid, i = resolve_task(d["todo"], a.ref)
+    t = d["todo"][pid]["tasks"][i]
+    si = resolve_step(t, a.step)
+    removed = t["steps"].pop(si)
+    touch(d, pid)
+    save(path, d)
+    out({"action": "step-rm", "task": t["title"], "removed": removed.get("text", "")})
 
 
 def build_parser():
-    ap = argparse.ArgumentParser(description="Full control over the Mission Eventually system.")
+    ap = argparse.ArgumentParser(description="Full control over the Mission: Eventually board.")
     ap.add_argument("--data", default="", help="Explicit path to data.json.")
     sub = ap.add_subparsers(dest="cmd", required=True)
 
-    p = sub.add_parser("add"); p.set_defaults(fn=cmd_add)
-    p.add_argument("--title", required=True)
-    p.add_argument("--note", default="")
-    p.add_argument("--due", default="")
-    p.add_argument("--status", default="")
+    sub.add_parser("projects").set_defaults(fn=cmd_projects)
 
-    p = sub.add_parser("list"); p.set_defaults(fn=cmd_list)
-    p.add_argument("--status", default="")
+    p = sub.add_parser("project-add"); p.set_defaults(fn=cmd_project_add)
+    p.add_argument("--name", required=True); p.add_argument("--note", default="")
 
-    p = sub.add_parser("get"); p.set_defaults(fn=cmd_get)
+    p = sub.add_parser("project-edit"); p.set_defaults(fn=cmd_project_edit)
+    p.add_argument("ref"); p.add_argument("--name", default=None); p.add_argument("--note", default=None)
+
+    p = sub.add_parser("project-move"); p.set_defaults(fn=cmd_project_move)
+    p.add_argument("ref"); p.add_argument("--to", type=int, required=True)
+
+    p = sub.add_parser("project-rm"); p.set_defaults(fn=cmd_project_rm)
     p.add_argument("ref")
 
-    p = sub.add_parser("update"); p.set_defaults(fn=cmd_update)
-    p.add_argument("ref")
-    p.add_argument("--title", default=None)
-    p.add_argument("--note", default=None)
-    p.add_argument("--due", default=None)
-    p.add_argument("--status", default=None)
+    p = sub.add_parser("tasks"); p.set_defaults(fn=cmd_tasks)
+    p.add_argument("ref", nargs="?", default="")
 
-    p = sub.add_parser("status"); p.set_defaults(fn=cmd_status)
-    p.add_argument("ref")
-    p.add_argument("state")
+    p = sub.add_parser("task-add"); p.set_defaults(fn=cmd_task_add)
+    p.add_argument("ref"); p.add_argument("--title", required=True)
+    p.add_argument("--note", default=""); p.add_argument("--due", default="")
 
-    p = sub.add_parser("step"); p.set_defaults(fn=cmd_step)
-    p.add_argument("ref")
-    p.add_argument("op", choices=["add", "done", "undone", "rm"])
-    p.add_argument("args", nargs="*")
+    p = sub.add_parser("task-edit"); p.set_defaults(fn=cmd_task_edit)
+    p.add_argument("ref"); p.add_argument("--title", default=None)
+    p.add_argument("--note", default=None); p.add_argument("--due", default=None)
 
-    p = sub.add_parser("rm"); p.set_defaults(fn=cmd_rm)
-    p.add_argument("ref")
+    p = sub.add_parser("task-done"); p.set_defaults(fn=cmd_task_done); p.add_argument("ref")
+    p = sub.add_parser("task-undone"); p.set_defaults(fn=cmd_task_undone); p.add_argument("ref")
+
+    p = sub.add_parser("task-move"); p.set_defaults(fn=cmd_task_move)
+    p.add_argument("ref"); p.add_argument("--to", required=True)
+
+    p = sub.add_parser("task-rm"); p.set_defaults(fn=cmd_task_rm); p.add_argument("ref")
+
+    p = sub.add_parser("step-add"); p.set_defaults(fn=cmd_step_add)
+    p.add_argument("ref"); p.add_argument("--text", required=True)
+
+    p = sub.add_parser("step-done"); p.set_defaults(fn=cmd_step_done)
+    p.add_argument("ref"); p.add_argument("step")
+    p = sub.add_parser("step-undone"); p.set_defaults(fn=cmd_step_undone)
+    p.add_argument("ref"); p.add_argument("step")
+    p = sub.add_parser("step-rm"); p.set_defaults(fn=cmd_step_rm)
+    p.add_argument("ref"); p.add_argument("step")
 
     return ap
 
