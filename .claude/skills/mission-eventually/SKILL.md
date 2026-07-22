@@ -54,14 +54,16 @@ python3 $M step-rm     "budget" 1
 
 1. Map the request to subcommand(s). Parse a `due` date only when clearly stated; convert relative dates to `YYYY-MM-DD`.
 2. Run the helper (several times for several changes). Read-only `projects`/`tasks` need no commit.
-3. **Sync** to `p100k-data` on `claude/load-wcsj46` (per the branch rules), then it is pushed onward as configured:
+3. **Sync** to `p100k-data` on `main` — the app reads that branch and nothing else:
 
    ```bash
-   cd ../p100k-data \
+   cd ../p100k-data && git pull --rebase --quiet \
      && git add data.json \
      && git commit -m "mission: <what changed>" \
-     && git push -u origin claude/load-wcsj46
+     && git push
    ```
+
+   Pull **before** editing too if the app may have written since.
 
 4. Confirm with a very short acknowledgement — e.g. `Done` (add a couple of words only if it aids clarity, like `Done — moved to Admin`). No summaries, no JSON, no follow-up suggestions unless the user asks. (Read commands like `projects`/`tasks` still return the info requested, kept brief.)
 

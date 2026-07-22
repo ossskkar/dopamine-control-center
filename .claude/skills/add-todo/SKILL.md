@@ -38,13 +38,13 @@ Existing life projects are typically **Finance, Health, Home, Admin & paperwork,
 
    Omit `--project` to force Inbox. The script prints one JSON line with the project and task it wrote.
 
-4. **Sync** to `p100k-data` on branch `claude/load-wcsj46`:
+4. **Sync** to `p100k-data` on `main` — the app reads that branch and nothing else:
 
    ```bash
-   cd ../p100k-data \
+   cd ../p100k-data && git pull --rebase --quiet \
      && git add data.json \
      && git commit -m "todo: add \"<title>\" to <project>" \
-     && git push -u origin claude/load-wcsj46
+     && git push
    ```
 
    Adjust the `p100k-data` path if it lives elsewhere (`$P100K_DATA` overrides the data path for the script).
