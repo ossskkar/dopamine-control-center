@@ -141,6 +141,12 @@ def main():
         print(f'token expires {exp} ({left} days) — reminder fires with 7 days left')
     else:
         print('could not read token expiry (offline, or a token that never expires) — no reminder')
+    # a build id, stamped into the page and written beside it as version.txt.
+    # The page fetches that file with no-store and reloads itself once when the
+    # two disagree — GitHub Pages caches index.html hard and has no cache-busting,
+    # so without this every deploy needs a manual hard-reload on every device.
+    build_id = datetime.utcnow().strftime('%Y%m%d-%H%M%S')
+    src = src.replace(b'__BUILD_ID__', build_id.encode())
     salt, iv = os.urandom(16), os.urandom(12)
     key = hashlib.pbkdf2_hmac('sha256', pw.encode(), salt, ITER, dklen=32)
     ct = AESGCM(key).encrypt(iv, src, None)
@@ -150,6 +156,7 @@ def main():
     srcpath = os.path.join(here, 'app.html')
     stale = os.path.getmtime(outpath) - os.path.getmtime(srcpath) if os.path.exists(outpath) else None
     open(outpath, 'w').write(out)
+    open(os.path.join(here, 'version.txt'), 'w').write(build_id + '\n')
     if stale is not None and stale < 0:
         mins = int(-stale // 60)
         print(f'app.html had been {mins} min ahead of the old index.html — now rebuilt.')
