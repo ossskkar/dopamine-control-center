@@ -9,7 +9,7 @@ The layer above the individual systems: the data repo itself, the hub tile order
 
 ## How the data flows
 
-The app (`index.html`, GitHub Pages) keeps everything in localStorage and mirrors it to the private repo **`p100k-data`**, file `data.json`, branch **`main`**, via the GitHub Contents API. Skills edit that same file in the local clone at `../p100k-data`.
+The app (`index.html`, GitHub Pages) keeps everything in localStorage and mirrors it to the private repo **`p100k-data`**, file `data.json`, branch **`main`**, via the GitHub Contents API. Skills edit that same file in the local clone at `/Users/oscar/Documents/claude-projects/p100k-data`.
 
 Merging is per-key last-write-wins on `meta` timestamps, so:
 
@@ -39,7 +39,7 @@ Tile ids: `p100k`, `plan`, `todo`, `oranje`, `money`, `diary`.
 
 ## Notes
 
-- If the clone is missing: `gh repo clone ossskkar/p100k-data ../p100k-data` (private repo, needs the GitHub login).
+- If the clone is missing: `gh repo clone ossskkar/p100k-data /Users/oscar/Documents/claude-projects/p100k-data` (private repo, needs the GitHub login).
 - `data.json` is compact single-line JSON. Never reformat it — `doctor` flags it if something did.
 - Pushing to any branch other than `main` is invisible to the app.
 - Operation Rainy Day and the diary are still shells: reachable tiles with no data model, so no skill can change anything inside them yet.

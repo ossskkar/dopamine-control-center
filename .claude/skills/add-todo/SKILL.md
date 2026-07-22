@@ -41,7 +41,7 @@ Existing life projects are typically **Finance, Health, Home, Admin & paperwork,
 4. **Sync** to `p100k-data` on `main` — the app reads that branch and nothing else:
 
    ```bash
-   cd ../p100k-data && git pull --rebase --quiet \
+   cd /Users/oscar/Documents/claude-projects/p100k-data && git pull --rebase --quiet \
      && git add data.json \
      && git commit -m "todo: add \"<title>\" to <project>" \
      && git push

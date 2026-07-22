@@ -72,7 +72,7 @@ Exams answer to English names ("reading" → `lezen`, "speaking" → `spreken`) 
 2. **Sync** — the app only sees it after a push to `main`:
 
    ```bash
-   cd ../p100k-data && git pull --rebase --quiet \
+   cd /Users/oscar/Documents/claude-projects/p100k-data && git pull --rebase --quiet \
      && git add data.json \
      && git commit -m "oranje: <what changed>" \
      && git push

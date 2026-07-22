@@ -57,13 +57,13 @@ Dates accept `today`, `yesterday`, `-2`, `2026-07-20` — work out "Monday" or "
 2. **Sync** — the app only sees it after a push to `main`:
 
    ```bash
-   cd ../p100k-data && git pull --rebase --quiet \
+   cd /Users/oscar/Documents/claude-projects/p100k-data && git pull --rebase --quiet \
      && git add data.json \
      && git commit -m "p100k: <what changed>" \
      && git push
    ```
 
-   Pull **before** editing too if the app may have written since — `git -C ../p100k-data pull --rebase`.
+   Pull **before** editing too if the app may have written since — `git -C /Users/oscar/Documents/claude-projects/p100k-data pull --rebase`.
 3. Confirm in a few words — `Done — 8 km logged for today`. No JSON dumps.
 
 ## Notes

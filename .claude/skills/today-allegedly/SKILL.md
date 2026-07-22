@@ -72,7 +72,7 @@ Times accept `7am`, `19:00`, `0730`. Dates accept `today`, `yesterday`, `-2`, `2
 2. **Sync** — the app only sees it after a push to `main`:
 
    ```bash
-   cd ../p100k-data && git pull --rebase --quiet \
+   cd /Users/oscar/Documents/claude-projects/p100k-data && git pull --rebase --quiet \
      && git add data.json \
      && git commit -m "plan: <what changed>" \
      && git push
