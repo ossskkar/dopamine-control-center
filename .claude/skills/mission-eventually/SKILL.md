@@ -37,11 +37,14 @@ python3 $M tasks                                 # all tasks; or: tasks "Health"
 python3 $M task-add  "Health" --title "Book dentist" --due 2026-08-01
 python3 $M task-edit "dentist" --note "molar" --due 2026-08-05
 python3 $M task-done "dentist"                   # / task-undone
-python3 $M task-move "dentist" --to "Admin"      # move between projects
+python3 $M task-move "dentist" --to "Admin"      # move to another project
+python3 $M task-move "dentist" --pos 1           # reorder within its project
 python3 $M task-rm   "dentist"
 
 # --- steps within a task ---
 python3 $M step-add    "budget" --text "Export last 3 months"
+python3 $M step-edit   "budget" 1 --title "Export last 6 months"
+python3 $M step-move   "budget" 3 --to 1         # reorder step to position 1
 python3 $M step-done   "budget" 1                # 1-based index or step id
 python3 $M step-undone "budget" 1
 python3 $M step-rm     "budget" 1

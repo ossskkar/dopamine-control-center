@@ -37,11 +37,13 @@ Task subcommands (TREF matches by task id or title substring, any project):
     task-edit      TREF [--title T] [--note N] [--due D]
     task-done      TREF
     task-undone    TREF
-    task-move      TREF --to PREF
+    task-move      TREF [--to PREF] [--pos N]   (change project and/or reorder)
     task-rm        TREF
 
 Step subcommands (SREF is a 1-based index or a step id, within that task):
     step-add       TREF --text TEXT
+    step-edit      TREF SREF [--title T] [--due D]
+    step-move      TREF SREF --to N             (reorder within the task)
     step-done      TREF SREF
     step-undone    TREF SREF
     step-rm        TREF SREF
@@ -301,17 +303,20 @@ def cmd_task_undone(d, path, a):
 
 
 def cmd_task_move(d, path, a):
+    if a.to is None and a.pos is None:
+        die("task-move needs --to <project> and/or --pos <n>", 2)
     pid, i = resolve_task(d["todo"], a.ref)
-    dest = resolve_project(d["todo"], a.to)
-    if dest == pid:
-        die("task already in that project", 2)
+    dest = resolve_project(d["todo"], a.to) if a.to else pid
     task = d["todo"][pid]["tasks"].pop(i)
-    d["todo"][dest].setdefault("tasks", []).append(task)
+    tasks = d["todo"][dest].setdefault("tasks", [])
+    pos = (max(1, min(a.pos, len(tasks) + 1)) - 1) if a.pos is not None else len(tasks)
+    tasks.insert(pos, task)
     touch(d, pid)
-    touch(d, dest)
+    if dest != pid:
+        touch(d, dest)
     save(path, d)
     out({"action": "task-move", "task": task["title"],
-         "from": d["todo"][pid]["name"], "to": d["todo"][dest]["name"]})
+         "from": d["todo"][pid]["name"], "to": d["todo"][dest]["name"], "pos": pos + 1})
 
 
 def cmd_task_rm(d, path, a):
@@ -364,6 +369,36 @@ def cmd_step_rm(d, path, a):
     out({"action": "step-rm", "task": t["title"], "removed": removed.get("title", "")})
 
 
+def cmd_step_edit(d, path, a):
+    pid, i = resolve_task(d["todo"], a.ref)
+    t = d["todo"][pid]["tasks"][i]
+    si = resolve_step(t, a.step)
+    s = t["steps"][si]
+    if a.title is not None:
+        if not a.title.strip():
+            die("--title is empty", 2)
+        s["title"] = a.title.strip()
+    if a.due is not None:
+        valid_due(a.due)
+        s["due"] = a.due.strip()
+    touch(d, pid)
+    save(path, d)
+    out({"action": "step-edit", "task": t["title"], "step": s})
+
+
+def cmd_step_move(d, path, a):
+    pid, i = resolve_task(d["todo"], a.ref)
+    t = d["todo"][pid]["tasks"][i]
+    si = resolve_step(t, a.step)
+    step = t["steps"].pop(si)
+    pos = max(1, min(a.to, len(t["steps"]) + 1)) - 1
+    t["steps"].insert(pos, step)
+    touch(d, pid)
+    save(path, d)
+    out({"action": "step-move", "task": t["title"],
+         "order": [s.get("title", "") for s in t["steps"]]})
+
+
 def build_parser():
     ap = argparse.ArgumentParser(description="Full control over the Mission: Eventually board.")
     ap.add_argument("--data", default="", help="Explicit path to data.json.")
@@ -398,12 +433,19 @@ def build_parser():
     p = sub.add_parser("task-undone"); p.set_defaults(fn=cmd_task_undone); p.add_argument("ref")
 
     p = sub.add_parser("task-move"); p.set_defaults(fn=cmd_task_move)
-    p.add_argument("ref"); p.add_argument("--to", required=True)
+    p.add_argument("ref"); p.add_argument("--to", default=None); p.add_argument("--pos", type=int, default=None)
 
     p = sub.add_parser("task-rm"); p.set_defaults(fn=cmd_task_rm); p.add_argument("ref")
 
     p = sub.add_parser("step-add"); p.set_defaults(fn=cmd_step_add)
     p.add_argument("ref"); p.add_argument("--text", required=True)
+
+    p = sub.add_parser("step-edit"); p.set_defaults(fn=cmd_step_edit)
+    p.add_argument("ref"); p.add_argument("step")
+    p.add_argument("--title", default=None); p.add_argument("--due", default=None)
+
+    p = sub.add_parser("step-move"); p.set_defaults(fn=cmd_step_move)
+    p.add_argument("ref"); p.add_argument("step"); p.add_argument("--to", type=int, required=True)
 
     p = sub.add_parser("step-done"); p.set_defaults(fn=cmd_step_done)
     p.add_argument("ref"); p.add_argument("step")
