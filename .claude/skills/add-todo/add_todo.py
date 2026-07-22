@@ -54,7 +54,7 @@ def resolve_data_path(explicit: str) -> str:
     if env:
         candidates.append(env)
     # .../<dcc-repo>/.claude/skills/add-todo/add_todo.py -> repo root is 3 up
-    repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
+    repo_root = os.path.abspath(os.path.join(os.path.dirname(os.path.realpath(__file__)), "..", "..", ".."))
     candidates.append(os.path.join(os.path.dirname(repo_root), "p100k-data", "data.json"))
     candidates.append(os.path.expanduser("~/p100k-data/data.json"))
     for c in candidates:

@@ -51,6 +51,21 @@ python3 $F flash                                       # per-deck accuracy, leve
 python3 $F flash-reset knm                             # wipe deck progress (--card <id> for one)
 ```
 
+## Saying it in plain language
+
+| What the user says | What to run |
+|---|---|
+| "I booked reading for 12 September" | `exam-set reading --status booked --date 2026-09-12` |
+| "passed KNM" / "ONA doesn't apply to me" | `exam-set knm --status passed` / `exam-set ona --status waived` |
+| "the listening exam moved, no date now" | `exam-set luisteren --clear-date` |
+| "save this site for writing practice" | `res-add schrijven --kind study --title … --url …` |
+| "I keep getting de/het wrong" | `ws-add schrijven --what "de/het" --cat grammar` |
+| "that one caught me again" | `ws-hit schrijven "de/het"` |
+| "which exams are left?" / "when's the next one?" | `exams` |
+| "how are my flashcards going?" | `flash` |
+
+Exams answer to English names ("reading" → `lezen`, "speaking" → `spreken`) as well as their ids.
+
 ## Workflow
 
 1. Run the helper (once per change). Convert dates to `YYYY-MM-DD` yourself.

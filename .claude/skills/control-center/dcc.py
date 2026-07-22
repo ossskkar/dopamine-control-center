@@ -46,7 +46,7 @@ def resolve_data_path(explicit: str) -> str:
     env = os.environ.get("P100K_DATA")
     if env:
         candidates.append(env)
-    repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
+    repo_root = os.path.abspath(os.path.join(os.path.dirname(os.path.realpath(__file__)), "..", "..", ".."))
     candidates.append(os.path.join(os.path.dirname(repo_root), "p100k-data", "data.json"))
     candidates.append(os.path.expanduser("~/p100k-data/data.json"))
     for c in candidates:
@@ -111,6 +111,64 @@ def cmd_status(d, a, path):
              "money": "shell — no data model yet",
              "diary": "shell — no data model yet"},
          "hub_order": d.get("hub", [])})
+
+
+def _on_day(ev, ds):
+    """Same rule as the planner: which days a block lands on."""
+    wd = (datetime.strptime(ds, "%Y-%m-%d").date().weekday() + 1) % 7  # 0 = Sunday
+    rep = ev.get("rep", "once")
+    if rep == "daily":
+        return True
+    if rep == "weekdays":
+        return 1 <= wd <= 5
+    if rep == "weekends":
+        return wd in (0, 6)
+    if rep == "custom":
+        return wd in (ev.get("days") or [])
+    return ev.get("date") == ds
+
+
+def cmd_brief(d, a, path):
+    """One answer to 'what's on today' — every system, one day."""
+    ds = a.date or date.today().isoformat()
+    now = datetime.now().hour * 60 + datetime.now().minute
+    ticks = d.get("plog", {}).get(ds) or {}
+    blocks = []
+    for ev in sorted((e for e in d.get("plan", {}).values() if _on_day(e, ds)),
+                     key=lambda e: e.get("start", "")):
+        p = str(ev.get("start", "0:0")).split(":")
+        s = (int(p[0]) if p[0].isdigit() else 0) * 60 + (int(p[1]) if len(p) > 1 and p[1].isdigit() else 0)
+        e_ = s + (ev.get("dur") or 30)
+        today = date.today().isoformat()
+        state = ("done" if ticks.get(ev["id"]) else
+                 "miss" if (ds < today or (ds == today and now >= e_)) else
+                 "soon" if (ds > today or now < s) else "now")
+        blocks.append({"start": ev.get("start"), "title": ev.get("title"), "state": state})
+    due, overdue = [], []
+    for p in d.get("todo", {}).values():
+        for t in p.get("tasks", []):
+            if t.get("done") or not t.get("due"):
+                continue
+            row = {"title": t.get("title"), "project": p.get("name"), "due": t["due"]}
+            if t["due"] == ds:
+                due.append(row)
+            elif t["due"] < ds:
+                overdue.append(row)
+    run = d.get("days", {}).get(ds)
+    exams = [{"exam": k, "date": v.get("date"), "status": v.get("status")}
+             for k, v in d.get("oranje", {}).items()
+             if v.get("date") and v.get("status") not in ("passed", "waived") and v["date"] >= ds]
+    race = d.get("settings", {}).get("raceDate", "")
+    out({"cmd": "brief", "date": ds,
+         "plan": {"blocks": blocks,
+                  "did_it": sum(1 for b in blocks if b["state"] == "done"),
+                  "missed": sum(1 for b in blocks if b["state"] == "miss"),
+                  "still_to_go": sum(1 for b in blocks if b["state"] in ("now", "soon"))},
+         "todos": {"due_today": due, "overdue": sorted(overdue, key=lambda r: r["due"])},
+         "run": {"km": (run.get("km") if isinstance(run, dict) else run) or 0} if run else None,
+         "next_exam": sorted(exams, key=lambda e: e["date"])[0] if exams else None,
+         "days_to_race": (datetime.strptime(race, "%Y-%m-%d").date()
+                          - datetime.strptime(ds, "%Y-%m-%d").date()).days if race else None})
 
 
 def cmd_pull(d, a, path):
@@ -210,6 +268,11 @@ def build_parser():
     sub = ap.add_subparsers(dest="cmd", required=True)
 
     sub.add_parser("status", help="what every system holds + git state").set_defaults(fn=cmd_status)
+
+    p = sub.add_parser("brief", help="one day across every system: plan, to-dos, run, exams")
+    p.set_defaults(fn=cmd_brief)
+    p.add_argument("--date", default="", help="YYYY-MM-DD, default today")
+
     sub.add_parser("pull", help="git pull --rebase in p100k-data").set_defaults(fn=cmd_pull)
 
     p = sub.add_parser("push", help="commit and push data.json"); p.set_defaults(fn=cmd_push)

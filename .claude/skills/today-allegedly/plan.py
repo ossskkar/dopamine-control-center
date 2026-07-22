@@ -56,7 +56,7 @@ def resolve_data_path(explicit: str) -> str:
     env = os.environ.get("P100K_DATA")
     if env:
         candidates.append(env)
-    repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
+    repo_root = os.path.abspath(os.path.join(os.path.dirname(os.path.realpath(__file__)), "..", "..", ".."))
     candidates.append(os.path.join(os.path.dirname(repo_root), "p100k-data", "data.json"))
     candidates.append(os.path.expanduser("~/p100k-data/data.json"))
     for c in candidates:
@@ -198,17 +198,31 @@ def block_view(d, ev, ds=None):
     return v
 
 
-def find_block(d, ref):
-    """Match by exact id, then by title substring. Ambiguity is an error."""
+def find_block(d, ref, at=None):
+    """Match by exact id, then by title substring.
+
+    Two blocks can share a title ("Gym" at 07:30 and at 18:00), so ticking takes
+    an `at` minute-of-day hint: the block whose window covers that moment wins,
+    else the most recent one already started. Still tied — error, listing times,
+    so the next attempt can name one exactly."""
     if ref in d["plan"]:
         return d["plan"][ref]
     q = str(ref).strip().lower()
     hits = [ev for ev in d["plan"].values() if q and q in ev.get("title", "").lower()]
     if not hits:
         die(f"no block matches '{ref}'", 1)
-    if len(hits) > 1:
-        die("'%s' matches %d blocks: %s" % (ref, len(hits), ", ".join(e["title"] for e in hits)), 1)
-    return hits[0]
+    if len(hits) == 1:
+        return hits[0]
+    if at is not None:
+        inside = [e for e in hits if mins(e.get("start")) <= at < mins(e.get("start")) + (e.get("dur") or 30)]
+        if len(inside) == 1:
+            return inside[0]
+        started = [e for e in hits if mins(e.get("start")) <= at]
+        if started:
+            return max(started, key=lambda e: mins(e.get("start")))
+        return min(hits, key=lambda e: mins(e.get("start")))
+    die("'%s' matches %d blocks: %s — name one by id or time"
+        % (ref, len(hits), ", ".join(f"{e.get('title')} at {e.get('start')} ({e['id']})" for e in hits)), 1)
 
 
 def cmd_day(d, a):
@@ -288,8 +302,9 @@ def cmd_rm(d, a):
 
 
 def cmd_tick(d, a):
-    ev = find_block(d, a.ref)
     ds = parse_date(a.date)
+    hint = mins(parse_hhmm(a.at)) if a.at else (datetime.now().hour * 60 + datetime.now().minute)
+    ev = find_block(d, a.ref, at=hint)
     when = int(time.time() * 1000)
     if a.at:
         hh, mm = parse_hhmm(a.at).split(":")
@@ -301,13 +316,86 @@ def cmd_tick(d, a):
 
 
 def cmd_untick(d, a):
-    ev = find_block(d, a.ref)
     ds = parse_date(a.date)
+    # prefer the blocks actually ticked that day; never guess between two of them,
+    # because guessing wrong throws away a tick silently
+    q = str(a.ref).strip().lower()
+    ticked = [e for e in d["plan"].values()
+              if (d["plog"].get(ds) or {}).get(e["id"]) and q in e.get("title", "").lower()]
+    if len(ticked) == 1:
+        ev = ticked[0]
+    elif len(ticked) > 1:
+        die("'%s' matches %d ticked blocks: %s — name one by id or time"
+            % (a.ref, len(ticked), ", ".join(f"{e.get('title')} at {e.get('start')} ({e['id']})"
+                                             for e in ticked)), 1)
+    else:
+        ev = find_block(d, a.ref)
     had = (d["plog"].get(ds) or {}).pop(ev["id"], None) is not None
     if not d["plog"].get(ds):
         d["plog"].pop(ds, None)
     touch(d, "_pd_" + ds)
     out({"cmd": "untick", "date": ds, "was_ticked": had, "block": block_view(d, ev, ds)})
+
+
+PL_SEED = [
+    ("Up, feet on the floor", "07:30", 30, "💤", "#fbbf24", "daily"),
+    ("Breakfast and coffee", "08:00", 30, "☕", "#fb923c", "daily"),
+    ("The hard thing, first", "09:00", 90, "🎯", "#8b5cf6", "weekdays"),
+    ("Move — walk or run", "12:00", 45, "🏃", "#34d399", "daily"),
+    ("Lunch, away from screens", "13:00", 45, "🍽", "#22d3ee", "daily"),
+    ("Admin and email", "16:00", 45, "💼", "#6366f1", "weekdays"),
+    ("Dinner", "19:00", 60, "🍽", "#22d3ee", "daily"),
+    ("Wind down, screens off", "22:30", 30, "🧘", "#fb7185", "daily"),
+]
+
+
+def cmd_seed(d, a):
+    """The app's 'start with an ordinary day' — refuses to run over an existing plan."""
+    if d["plan"] and not a.force:
+        die("there are already %d blocks — pass --force to add the ordinary day on top"
+            % len(d["plan"]), 1)
+    base = int(time.time() * 1000)
+    added = []
+    for i, (title, start, dur, icon, color, rep) in enumerate(PL_SEED):
+        bid = "e" + b36(base) + str(i)
+        d["plan"][bid] = {"id": bid, "title": title, "start": start, "dur": dur, "note": "",
+                          "icon": icon, "color": color, "rep": rep, "days": [], "date": "",
+                          "ts": base + i}
+        touch(d, "_pl_" + bid)
+        added.append(block_view(d, d["plan"][bid]))
+    out({"cmd": "seed", "added": len(added), "blocks": added})
+
+
+def cmd_copy(d, a):
+    """Duplicate a block — same shape, new id, optionally re-timed or re-dated."""
+    src = find_block(d, a.ref)
+    bid = gen_id()
+    while bid in d["plan"]:
+        bid = gen_id()
+    ev = dict(src)
+    ev["id"] = bid
+    ev["days"] = list(src.get("days") or [])
+    if a.title is None:
+        a.title = src.get("title", "")
+    apply_fields(d, ev, a, True)
+    d["plan"][bid] = ev
+    touch(d, "_pl_" + bid)
+    out({"cmd": "copy", "from": src["id"], "block": block_view(d, ev)})
+
+
+def cmd_clear(d, a):
+    """Wipe one day's ticks, or every block that lands on it."""
+    ds = parse_date(a.date)
+    ticks = len(d["plog"].get(ds) or {})
+    d["plog"].pop(ds, None)
+    touch(d, "_pd_" + ds)
+    removed = []
+    if a.blocks:
+        for ev in events_on(d, ds):
+            d["plan"].pop(ev["id"], None)
+            touch(d, "_pl_" + ev["id"])
+            removed.append(ev.get("title", ""))
+    out({"cmd": "clear", "date": ds, "ticks_cleared": ticks, "blocks_removed": removed})
 
 
 def cmd_stats(d, a):
@@ -321,7 +409,7 @@ def cmd_stats(d, a):
          "pct": round(done / len(rows) * 100) if rows else 0})
 
 
-WRITES = {"add", "edit", "rm", "tick", "untick"}
+WRITES = {"add", "edit", "rm", "tick", "untick", "seed", "copy", "clear"}
 
 
 def add_field_args(p, with_title_flag=True):
@@ -366,6 +454,19 @@ def build_parser():
 
     p = sub.add_parser("stats", help="did it / missed / still to go"); p.set_defaults(fn=cmd_stats)
     p.add_argument("date", nargs="?", default="today")
+
+    p = sub.add_parser("seed", help="fill an empty plan with an ordinary day")
+    p.set_defaults(fn=cmd_seed)
+    p.add_argument("--force", action="store_true", help="add it even if blocks exist")
+
+    p = sub.add_parser("copy", help="duplicate a block"); p.set_defaults(fn=cmd_copy)
+    p.add_argument("ref")
+    add_field_args(p)
+
+    p = sub.add_parser("clear", help="wipe a day's ticks (--blocks also deletes its blocks)")
+    p.set_defaults(fn=cmd_clear)
+    p.add_argument("date", nargs="?", default="today")
+    p.add_argument("--blocks", action="store_true")
 
     return ap
 

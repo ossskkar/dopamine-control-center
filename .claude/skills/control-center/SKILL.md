@@ -1,6 +1,6 @@
 ---
 name: control-center
-description: Cross-system control for the Dopamine Control Center — sync the data repo (pull before edits, push after), reorder the hub tiles, see what every system currently holds, and diagnose sync problems. Use for "what's the state of everything", "sync my data", "push that to the app", "put the planner tile first", "the app isn't showing my change", "is the data healthy". The other skills own one system each: project-100k (runs), today-allegedly (planner), mission-eventually / add-todo / board-query (to-dos), flying-dutch (Dutch exams).
+description: Cross-system control for the Dopamine Control Center — the day's brief across every system, syncing the data repo (pull before edits, push after), the hub tile order, and diagnosing sync problems. Use for "what's on today", "what have I got on", "what's the state of everything", "sync my data", "push that to the app", "put the planner tile first", "the app isn't showing my change", "is the data healthy". The other skills own one system each: project-100k (runs), today-allegedly (planner), mission-eventually / add-todo / board-query (to-dos), flying-dutch (Dutch exams).
 ---
 
 # control-center
@@ -23,6 +23,8 @@ Merging is per-key last-write-wins on `meta` timestamps, so:
 ```bash
 C=".claude/skills/control-center/dcc.py"
 
+python3 $C brief                  # "what's on today?" — plan, to-dos due, run, next exam
+python3 $C brief --date 2026-07-25
 python3 $C status                 # every system's counts + git state of the data repo
 python3 $C pull                   # git pull --rebase in p100k-data
 python3 $C push -m "plan: add gym block"

@@ -37,6 +37,20 @@ python3 $P race                   # race date + plan start
 python3 $P race --set 2026-10-17  # move the race
 ```
 
+## Saying it in plain language
+
+| What the user says | What to run |
+|---|---|
+| "ran 8k this morning" | `log --km 8` |
+| "yesterday was 12 at five twenty" | `log --date yesterday --km 12 --pace 5:20` |
+| "that one was with the pram" | `log --date yesterday --baby` |
+| "add another 3k to Monday" | `log --date <that Monday> --km 3 --add` |
+| "scrap Sunday's run" | `rm --date <that Sunday>` |
+| "how am I doing?" / "am I on plan?" | `summary` / `week` |
+| "push the race back a week" | `race --set <new date>` |
+
+Dates accept `today`, `yesterday`, `-2`, `2026-07-20` — work out "Monday" or "last week" yourself and pass the date.
+
 ## Workflow
 
 1. Run the helper (once per change).

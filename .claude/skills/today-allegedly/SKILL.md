@@ -38,12 +38,33 @@ python3 $T edit "Gym" --start 07:30 --dur 45
 python3 $T edit "Gym" --rep daily --note "easy pace"
 python3 $T rm "Dentist"             # also clears its ticks
 
+python3 $T copy "Gym" --start 18:00 # same block again, later in the day
+python3 $T seed                     # "an ordinary day": 8 starter blocks (empty plan only)
+python3 $T clear --date yesterday   # wipe that day's ticks (--blocks also deletes its blocks)
+
 # --- what actually happened ---
 python3 $T tick "Gym"               # done now
 python3 $T tick "Gym" --at 07:35    # done at a stated time
 python3 $T tick "Gym" --date yesterday
 python3 $T untick "Gym"
 ```
+
+## Saying it in plain language
+
+| What the user says | What to run |
+|---|---|
+| "gym at 7 every weekday, an hour" | `add --title Gym --start 7am --dur 60 --rep weekdays` |
+| "dutch class 8pm Mondays and Wednesdays" | `add --title "Dutch class" --start 8pm --dur 60 --days mon,wed` |
+| "dentist Friday at half three" | `add --title Dentist --start 15:30 --dur 45 --on <that Friday>` |
+| "push the gym back half an hour" | `edit Gym --start 07:30` |
+| "put another gym in at six" | `copy Gym --start 18:00` |
+| "I did it at twenty past" | `tick Gym --at 07:20` |
+| "no I didn't, undo that" | `untick Gym` |
+| "give me a normal day to start from" | `seed` |
+| "clear today, it's a write-off" | `clear` |
+| "what's left?" / "how did today go?" | `stats` / `day` |
+
+Times accept `7am`, `19:00`, `0730`. Dates accept `today`, `yesterday`, `-2`, `2026-07-25` — work out "Friday" or "next week" yourself and pass the date.
 
 ## Workflow
 
@@ -64,6 +85,8 @@ python3 $T untick "Gym"
 
 - `dur` is clamped to 5–720 minutes; blocks that would cross midnight just run past the bottom of the day — the app does not split them.
 - `edit` only changes the flags you pass; everything else stays.
+- Two blocks can share a title. `tick` resolves that by clock (the one whose window covers `--at`, else the last one already started); `edit`, `rm`, `copy` and `untick` refuse to guess and list the candidates with their times and ids — re-run naming one.
+- `seed` refuses to run on a plan that already has blocks unless you pass `--force`.
 - Deleting a block removes its ticks on every date. Confirm before deleting one the user has been running for a while.
 - There is no "skipped" state: a block you deliberately didn't do reads the same as one you forgot.
 - This skill touches `plan`, `plog` and their `meta` keys only.

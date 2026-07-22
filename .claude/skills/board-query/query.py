@@ -32,7 +32,7 @@ def resolve_data_path(explicit: str) -> str:
     env = os.environ.get("P100K_DATA")
     if env:
         candidates.append(env)
-    repo_root = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", "..", ".."))
+    repo_root = os.path.abspath(os.path.join(os.path.dirname(os.path.realpath(__file__)), "..", "..", ".."))
     candidates.append(os.path.join(os.path.dirname(repo_root), "p100k-data", "data.json"))
     candidates.append(os.path.expanduser("~/p100k-data/data.json"))
     for c in candidates:
