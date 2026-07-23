@@ -7,3 +7,5 @@ repomix-output.txt
 repomix-instruction.md
 .token
 .DS_Store
+# Skill bodies are surfaced by the harness in a fresh session — embedding them is redundant
+.claude/skills/**/SKILL.md
